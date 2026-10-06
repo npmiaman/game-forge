@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Block Racer</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body { margin: 0; height: 100%; background: #8ec5ff; overflow: hidden; touch-action: none; }
+    #game { position: fixed; inset: 0; }
+    .hud { font-family: "Press Start 2P", monospace !important; color: #fff; text-shadow: 3px 3px 0 #3f3f3f; user-select: none; }
+    .hud .stat { position: absolute; font-size: 18px; line-height: 1.4; opacity: 0; transition: opacity .3s; }
+    .hud.playing .stat { opacity: 1; }
+    .hud .lbl { font-size: 10px; color: #e8e8e8; letter-spacing: 1px; }
+    .hud .big { font-size: 40px; }
+    .hud .tl { top: 18px; left: 20px; }
+    .hud .tr { top: 18px; right: 20px; text-align: right; color: #ffe14d; }
+    .hud .tc { top: 14px; left: 50%; transform: translateX(-50%); text-align: center; }
+    .hud .br { bottom: 22px; right: 24px; text-align: right; }
+    #time.low { color: #ff5050; animation: pulse .5s infinite alternate; }
+    @keyframes pulse { to { transform: scale(1.18); } }
+    .boostbar { width: 180px; height: 12px; margin-top: 8px; background: #0008; border: 3px solid #3f3f3f; margin-left: auto; }
+    .boostbar div { height: 100%; width: 0; transition: width .08s; }
+    .banner { position: absolute; top: 26%; width: 100%; text-align: center; font-size: 46px; opacity: 0; }
+    .banner small { display: block; font-size: 14px; margin-top: 14px; color: #fff; }
+    .banner.show { animation: banner 2.2s ease-out forwards; }
+    @keyframes banner { 0% { opacity: 0; transform: scale(1.8); } 12% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-30px); } }
+    .popup { position: absolute; top: 58%; font-size: 16px; animation: pop 1s ease-out forwards; white-space: nowrap; transform: translateX(-50%); }
+    .popup.bigpop { font-size: 26px; }
+    @keyframes pop { 0% { opacity: 0; margin-top: 10px; scale: .5; } 15% { opacity: 1; scale: 1.15; } 30% { scale: 1; } 100% { opacity: 0; margin-top: -90px; } }
+    .flash { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+    .flash.on { animation: flash .35s ease-out; }
+    @keyframes flash { from { opacity: 1; } to { opacity: 0; } }
+    .hud .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: linear-gradient(#0006, #0003 40%, #0007); pointer-events: auto; cursor: pointer; text-align: center; padding: 16px; }
+    .hud .overlay h1 { margin: 0 0 10px; font-size: clamp(40px, 9vw, 96px); line-height: 1.05; color: #ffe14d; text-shadow: 6px 6px 0 #6b4a12, 10px 10px 0 #0005; }
+    .hud .overlay p { margin: 0; font-size: 12px; line-height: 2; color: #fff; }
+    .hud .overlay .keys { font-size: 10px; color: #dde; }
+    .hud .overlay .go { font-size: 16px; color: #5dffa0; animation: blink 1s steps(2) infinite; }
+    @keyframes blink { 50% { opacity: 0.3; } }
+    .hud .hidden { display: none; }
+    @media (max-width: 700px) { .hud .stat { font-size: 12px; } .hud .big { font-size: 26px; } .boostbar { width: 110px; } }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

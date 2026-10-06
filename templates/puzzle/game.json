@@ -1,0 +1,7 @@
+{
+  "title": "{{TITLE}}",
+  "tagline": "{{TAGLINE}}",
+  "controls": "Arrows/WASD move · Z undo · R restart · Esc pause",
+  "color": "#5dffa0",
+  "engine": "phaser"
+}

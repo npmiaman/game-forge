@@ -1,0 +1,18 @@
+{
+  // F5: opens the game in Chrome with breakpoints working in your .ts files.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug game in Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/games/${input:game}/?${input:query}",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "▶ Arcade (dev server)"
+    }
+  ],
+  "inputs": [
+    { "id": "game", "type": "promptString", "description": "Game slug", "default": "neon-swarm" },
+    { "id": "query", "type": "promptString", "description": "URL params (tune, god, wave=5…)", "default": "tune" }
+  ]
+}

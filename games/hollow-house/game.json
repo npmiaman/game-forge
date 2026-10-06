@@ -1,0 +1,8 @@
+{
+  "title": "Hollow House",
+  "tagline": "First-person horror. Grandma is hunting you. Zombies roam the halls. Find 3 keys, hide, fight, escape.",
+  "controls": "WASD · mouse look · Shift sprint · C crouch · Click swing · E interact/hide · F flashlight",
+  "color": "#b31212",
+  "engine": "three",
+  "featured": true
+}

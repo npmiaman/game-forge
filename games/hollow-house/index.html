@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Hollow House</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #game { position: fixed; inset: 0; }
+    .hud { font-family: "Press Start 2P", monospace !important; color: #ddd; font-size: 11px; user-select: none; }
+    .hud > div { position: absolute; }
+    .hud .tl, .hud .tr, .hud .bl, .hud .br, .hud .tc, #cross, #prompt { opacity: 0; transition: opacity .4s; }
+    .hud.playing .tl, .hud.playing .tr, .hud.playing .bl, .hud.playing .br, .hud.playing .tc, .hud.playing #cross, .hud.playing #prompt { opacity: 1; }
+    .tl { top: 18px; left: 20px; line-height: 2; } .tr { top: 18px; right: 20px; text-align: right; line-height: 2; }
+    .tc { top: 18px; left: 0; right: 0; text-align: center; line-height: 2.2; }
+    .bl { bottom: 20px; left: 20px; width: 220px; } .br { bottom: 20px; right: 20px; width: 160px; text-align: right; line-height: 2; }
+    .dim { color: #888; font-size: 9px; }
+    #msg { transition: opacity .6s; font-size: 12px; text-shadow: 0 0 8px #000; }
+    #objective { color: #aaa; font-size: 9px; }
+    .bar { height: 12px; background: #0009; border: 2px solid #333; margin-bottom: 6px; } .bar.thin { height: 6px; }
+    #hp { height: 100%; background: linear-gradient(#e33, #911); transition: width .2s; } #st { height: 100%; background: #ccc; } #xp { height: 100%; background: #6f6; }
+    .k { display: inline-block; width: 14px; height: 14px; border: 2px solid; margin-left: 6px; opacity: .35; }
+    .k.r { border-color: #f33; } .k.b { border-color: #39f; } .k.g { border-color: #fc3; }
+    .k.got { opacity: 1; } .k.r.got { background: #f33; } .k.b.got { background: #39f; } .k.g.got { background: #fc3; }
+    #sense { color: #f66; font-size: 10px; margin-top: 8px; }
+    #cross { left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #fff8; }
+    #prompt { left: 0; right: 0; top: calc(50% + 34px); text-align: center; color: #fff; font-size: 11px; text-shadow: 0 0 6px #000; }
+    #vignette { inset: 0; pointer-events: none; }
+    #hurt { inset: 0; pointer-events: none; background: radial-gradient(transparent 40%, rgba(160,0,0,.7)); opacity: 0; }
+    #hideview { inset: 0; pointer-events: none; display: none; }
+    #hideview.wardrobe { display: block; background: linear-gradient(90deg, #000 0 44%, transparent 47% 53%, #000 56% 100%); }
+    #hideview.bed { display: block; background: linear-gradient(#000 0 52%, rgba(0,0,0,.4) 60%, transparent 70%); }
+    #scare { inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(transparent 30%, rgba(120,0,0,.85)); }
+    #scare.on { animation: scare 1.6s steps(8) forwards; }
+    @keyframes scare { 0% { opacity: 1; } 50% { opacity: .6; } 100% { opacity: 1; background: #000; } }
+    #fade { inset: 0; background: #000; opacity: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; text-align: center; transition: opacity .6s; }
+    #fade.on { opacity: 1; }
+    #fadeText { color: #bbb; font-size: 14px; line-height: 1.8; } #fadeText b { color: #f33; font-size: 28px; } #fadeText small { color: #777; font-size: 10px; }
+    .ov { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; background: radial-gradient(rgba(0,0,0,.55), rgba(0,0,0,.92)); pointer-events: auto; cursor: pointer; padding: 16px; }
+    .ov h1 { margin: 0; font-size: clamp(30px, 7vw, 72px); color: #b31212; text-shadow: 0 0 20px #f00, 4px 4px 0 #300; letter-spacing: 4px; animation: jitter 3s infinite; }
+    @keyframes jitter { 0%, 92%, 100% { transform: none; } 93% { transform: translate(3px, -2px) skewX(4deg); } 96% { transform: translate(-3px, 1px); } }
+    .ov h2 { color: #7dff9a; font-size: 18px; margin: 0; }
+    .ov p { margin: 0; line-height: 2.1; } .ov .sub { color: #aaa; font-style: italic; } .ov .keys { font-size: 9px; color: #999; }
+    .ov .go { color: #ddd; animation: blink 1.2s steps(2) infinite; } @keyframes blink { 50% { opacity: .3; } }
+    #cardRow { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+    .card { width: 210px; min-height: 150px; padding: 18px; border: 2px solid #3a5a3a; background: #0b120b; display: flex; flex-direction: column; gap: 14px; cursor: pointer; transition: transform .1s, border-color .1s; }
+    .card:hover { transform: scale(1.05); border-color: #7dff9a; }
+    .card b { color: #7dff9a; font-size: 12px; } .card span { color: #ccc; font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.4; } .card em { color: #666; font-size: 9px; font-style: normal; margin-top: auto; }
+    .hidden { display: none !important; }
+    @media (max-width: 700px) { .bl { width: 140px; } .hud { font-size: 9px; } }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

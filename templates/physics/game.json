@@ -1,0 +1,7 @@
+{
+  "title": "{{TITLE}}",
+  "tagline": "{{TAGLINE}}",
+  "controls": "Drag back from the orb and release to launch · R restart · Esc pause",
+  "color": "#ffb84d",
+  "engine": "phaser"
+}

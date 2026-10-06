@@ -1,0 +1,8 @@
+{
+  "title": "Block Racer",
+  "tagline": "Drift through an endless voxel world. Smash crates, launch off ramps, beat the clock.",
+  "controls": "W gas · S brake · A/D steer · Hold Space/Shift to drift, release to boost · R restart · Esc pause",
+  "color": "#ffe14d",
+  "engine": "three",
+  "featured": true
+}

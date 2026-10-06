@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/hooks/typecheck.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Type-checking…"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/shot.mjs:*)",
+      "Bash(npm run build)",
+      "Bash(npm run check)",
+      "Bash(npm run new:*)",
+      "Bash(npm run play:*)",
+      "Bash(npm run ship:*)",
+      "Bash(npm run shot:*)",
+      "Bash(npx tsc --noEmit -p .)"
+    ]
+  }
+}

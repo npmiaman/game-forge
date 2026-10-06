@@ -1,0 +1,8 @@
+{
+  "title": "Neon Swarm",
+  "tagline": "Twin-stick roguelite. Survive the swarm, stack absurd upgrades, chain explosions.",
+  "controls": "WASD move · Mouse aim (auto-fire) · Space/Shift/Right-click dash · Esc pause · M mute",
+  "color": "#33f0ff",
+  "engine": "phaser",
+  "featured": true
+}

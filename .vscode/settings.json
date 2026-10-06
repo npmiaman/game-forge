@@ -1,0 +1,7 @@
+{
+  "search.exclude": { "**/node_modules": true, "dist": true, ".shots": true },
+  "files.watcherExclude": { "**/node_modules/**": true, "dist/**": true, ".shots/**": true },
+  "files.exclude": { "**/.DS_Store": true },
+  "editor.formatOnSave": false,
+  "workbench.editorAssociations": { "*.png": "imagePreview.previewEditor" }
+}

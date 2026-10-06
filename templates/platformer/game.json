@@ -1,0 +1,7 @@
+{
+  "title": "{{TITLE}}",
+  "tagline": "{{TAGLINE}}",
+  "controls": "Arrows/WASD move · Space/W/Up jump · Esc pause · M mute",
+  "color": "#ffcc33",
+  "engine": "phaser"
+}

@@ -1,0 +1,47 @@
+{
+  // Cmd+Shift+P → "Tasks: Run Task", or Cmd+Shift+B for the default build task.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "▶ Arcade (dev server)",
+      "type": "npm", "script": "dev",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x" }, "background": { "activeBegins": true, "beginsPattern": "VITE", "endsPattern": "Local:" } },
+      "presentation": { "panel": "dedicated", "reveal": "silent" }
+    },
+    {
+      "label": "▶ Play a game…",
+      "type": "shell", "command": "npm run play -- ${input:game}",
+      "isBackground": true,
+      "problemMatcher": { "pattern": { "regexp": "^x" }, "background": { "activeBegins": true, "beginsPattern": "VITE", "endsPattern": "▶" } },
+      "presentation": { "panel": "dedicated" }
+    },
+    {
+      "label": "＋ New game…",
+      "type": "shell", "command": "npm run new -- ${input:slug} --template ${input:template} --title \"${input:title}\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Playtest a game (bot + screenshots)",
+      "type": "shell", "command": "npm run shot -- ${input:game} --gpu --seconds 15 && open .shots/${input:game}",
+      "problemMatcher": []
+    },
+    {
+      "label": "✓ Type-check",
+      "type": "npm", "script": "check",
+      "problemMatcher": "$tsc",
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "📦 Build static site",
+      "type": "npm", "script": "build",
+      "problemMatcher": "$tsc"
+    }
+  ],
+  "inputs": [
+    { "id": "game", "type": "promptString", "description": "Game slug (folder name in games/)", "default": "neon-swarm" },
+    { "id": "slug", "type": "promptString", "description": "New game slug (kebab-case)", "default": "my-game" },
+    { "id": "title", "type": "promptString", "description": "Title", "default": "My Game" },
+    { "id": "template", "type": "pickString", "description": "Template", "options": ["blank", "topdown", "platformer", "puzzle", "physics", "3d"], "default": "blank" }
+  ]
+}

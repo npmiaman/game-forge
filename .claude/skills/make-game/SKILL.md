@@ -1,0 +1,57 @@
+---
+name: make-game
+description: Build a new browser game (or a major new mode for one) in this repo from a prompt. Use when asked to make, build, create, or prototype a game, or remix an existing one into a new game.
+---
+
+# Make a game
+
+Target: a game that is **fun within 10 seconds of pressing play**, verified by playtest, in one session. Scope down before you polish up: one core verb done with great feel beats five half-done systems.
+
+## 1. Design (~10 lines in your reply, then build)
+
+- **Core verb** — what the player does every second (shoot, jump, slice, place, steer).
+- **Loop** — verb → reward → escalation → fail/win → instant retry.
+- **Base** — pick the closest starting point (`npm run new` with no args lists them):
+
+| Idea shape | Start from |
+|---|---|
+| Anything 2D that fits nothing below | `--template blank` |
+| Shooter, survivors-like, top-down action, many enemies | `--template topdown` (or `--from neon-swarm` for the polished version) |
+| Platformer, side-scroller, runner | `--template platformer` |
+| Turn-based, grid, tiles, logic, match-3, tactics | `--template puzzle` |
+| Real rigid bodies: stacking, slingshot, golf, ragdoll | `--template physics` |
+| Needs 3D | `--template 3d` |
+
+- **Juice plan** — which feedback fires on the core verb, on reward, on damage ([game-feel.md](game-feel.md)).
+- **Out of scope** — name what you're NOT building this session.
+
+Ask the user only if the genre itself is ambiguous; otherwise pick the most fun interpretation and say what you picked.
+
+## 2. Scaffold
+
+`npm run new -- <slug> --template <t> --title "Title" --tagline "One line"`, then fill in `games/<slug>/GAME.md` (pitch, loop, controls) and `game.json` controls/color. GAME.md is the game's memory across sessions — keep it current as you build.
+
+## 3. Build the core verb first
+
+Get the player moving and the core verb working with feedback before anything else. Most of the work is the game's Play scene; menus, pause, game over, best score, level-up cards come from the kit (`menuScene`, `gameOverScene`, `enablePause`, `chooseCard`).
+- Art: `kit/phaser/textures.ts` (procedural). Sound: `kit/audio.ts` presets. Feel: `Juice`.
+- Every tuning number goes in the game's `config.ts` and through `tune(obj, 'Name')` so `?tune` shows live sliders.
+- Systems to reuse rather than rewrite: `Director` (waves), `Upgrades` (roguelite picks), `Grid` (A*, flood fill), `Fsm` (AI/states), `Pool` + `SpatialHash` (>100 entities), `buildLevel` (ASCII levels), `TouchPad` (mobile).
+- Add debug URL params as you go (`?god`, `?level=`, `?wave=`) so playtests can reach late-game states.
+- Puzzle games: write a quick brute-force solver to prove each level is solvable before shipping it.
+
+## 4. Complete the loop
+
+Menu → play → game over → instant retry (R/Space). Score + persisted best. Escalation over time. Mute on M, pause on Esc (both free via the kit).
+
+## 5. Verify
+
+Done means all of:
+- `npm run check` passes (a hook also type-checks after every edit).
+- `npm run shot -- <slug> --gpu --seconds 20` exits clean, AND you read the screenshots and `__playtest` state shows the loop progressing (score rising, enemies dying, levels reached). Use `--eval` to force states the bot can't reach.
+- Every item in [game-feel.md](game-feel.md) is present or consciously skipped.
+- fps ≥ 55 in the `--gpu` run.
+
+## 6. Hand off
+
+Tell the user: `npm run play -- <slug>` (opens it), the controls, `?tune` for live sliders, what you tuned for fun, what you'd add next. Update GAME.md's Status and Ideas.

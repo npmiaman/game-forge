@@ -1,0 +1,8 @@
+node_modules
+/dist
+/ship
+.shots
+.scratch
+.DS_Store
+.claude/settings.local.json
+*.log
