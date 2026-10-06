@@ -1,0 +1,8 @@
+{
+  "title": "Blast Ball",
+  "tagline": "3v3 football where everyone's armed. Score goals, knock out the carrier, grab airdrops, drop gloo walls, beat the zone.",
+  "controls": "WASD · Shift sprint · mouse aim · Left click shoot · Hold right click/Space to kick · G gloo wall · Q swap gun",
+  "color": "#ff7a1a",
+  "engine": "three",
+  "featured": true
+}
