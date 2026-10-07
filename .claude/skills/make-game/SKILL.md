@@ -5,7 +5,20 @@ description: Build a new browser game (or a major new mode for one) in this repo
 
 # Make a game
 
-Target: a game that is **fun within 10 seconds of pressing play**, verified by playtest, in one session. Scope down before you polish up: one core verb done with great feel beats five half-done systems.
+Target: a game that is **fun within 10 seconds of pressing play**, verified by playtest, in **under 30 minutes**.
+
+**Time budget.** Run `date` at the start and at each step; if a step overruns, cut scope in the next one, never the verify or kid-check steps.
+
+| Step | Budget | Done by |
+|---|---|---|
+| 1. Design | 2 min | 0:02 |
+| 2. Scaffold | 1 min | 0:03 |
+| 3. Core verb | 10 min | 0:13 |
+| 4. Complete the loop | 5 min | 0:18 |
+| 5. Verify | 4 min | 0:22 |
+| 6. Kid check | 6 min | 0:28 |
+| 7. Hand off | 1 min | 0:29 |
+ Scope down before you polish up: one core verb done with great feel beats five half-done systems.
 
 ## 1. Design (~10 lines in your reply, then build)
 
@@ -59,4 +72,4 @@ Run the `kid-check` skill: find the 5 things a kid would say look wrong, stage a
 
 ## 7. Hand off
 
-Tell the user: `npm run play -- <slug>` (opens it), the controls, `?tune` for live sliders, what you tuned for fun, what you'd add next. Update GAME.md's Status and Ideas.
+Tell the user: how long the build took, `npm run play -- <slug>` (opens it), the 5 kid-check problems (numbered, kid-phrased, with "say fix 2 / fix all"), the controls, `?tune` for live sliders, what you tuned for fun, what you'd add next. Update GAME.md's Status and Ideas.

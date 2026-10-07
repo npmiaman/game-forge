@@ -5,7 +5,7 @@ description: Find 5 visual problems a kid would point out in how a game looks, a
 
 # Kid check
 
-After a game is built, play it like a kid would and find **5 problems with how the game looks that anyone notices within a minute of playing** — then implement every fix now, save each as a patch, and roll it back. The user picks which to apply; applying is one command. Budget: ~8 minutes for the whole check.
+After a game is built, play it like a kid would and find **5 problems with how the game looks that anyone notices within a minute of playing** — then implement every fix now, save each as a patch, and roll it back. The user picks which to apply; applying is one command. Budget: ~6 minutes for the whole check (it's step 6 of the 30-minute build).
 
 ## If the user says "fix N" / "fix all" / names a listed problem
 
