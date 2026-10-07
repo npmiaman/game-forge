@@ -1,20 +1,16 @@
 diff --git a/games/blast-ball/main.ts b/games/blast-ball/main.ts
-index 434bb7b..26ff232 100644
+index 434bb7b..211f1f9 100644
 --- a/games/blast-ball/main.ts
 +++ b/games/blast-ball/main.ts
-@@ -113,6 +113,7 @@ let bannerT = 0, noteT = 0, hitT = 0;
- function banner(html: string, secs = 2.2) { const b = $('banner'); b.innerHTML = html; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); bannerT = secs; }
- function note(text: string, secs = 2.5, color = '#fff') { const n = $('note'); n.textContent = text; n.style.color = color; n.style.opacity = '1'; noteT = secs; }
- function feed(html: string) {
-+  if (state === 'menu') return;   // the attract match behind the title shouldn't leave entries for your kickoff
-   const el = document.createElement('div'); el.innerHTML = html; $('feed').prepend(el);
-   setTimeout(() => el.classList.add('fade'), 4000); setTimeout(() => el.remove(), 4600);
-   while ($('feed').children.length > 6) $('feed').lastElementChild!.remove();
-@@ -164,6 +165,7 @@ function startMatch() {
-   rockets.forEach((r) => scene.remove(r.mesh)); rockets = [];
-   if (q.get('gun')) human.equip(q.get('gun') as WeaponId);
-   $('menu').classList.add('hidden'); $('end').classList.add('hidden');
-+  $('feed').innerHTML = '';   // fresh kill feed every match (rematches too)
-   hud.classList.add('playing');
-   if (!music.playing) music.play(SONGS.synthwave);
-   music.setIntensity(1);
+@@ -37,6 +37,11 @@ sfx.define('crate', { volume: 0.7, freq: 80, sustain: 0.04, release: 0.25, shape
+ await document.fonts.load('16px "Press Start 2P"').catch(() => {});
+ const { scene, camera, renderer, loop, hud, shake } = bootThree({ background: 0x86bfff, fog: { color: 0xa9d2ff, near: 90, far: 230 }, fov: 70, shadows: true, maxPixelRatio: 1.5 });
+ camera.far = 500; camera.updateProjectionMatrix();
++{ // sky: deep blue overhead fading to the hazy horizon instead of one flat colour
++  const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d')!, grad = g.createLinearGradient(0, 0, 0, 256);
++  grad.addColorStop(0, '#2f6fd6'); grad.addColorStop(0.6, '#86bfff'); grad.addColorStop(1, '#cfe6ff'); g.fillStyle = grad; g.fillRect(0, 0, 2, 256);
++  scene.background = new THREE.CanvasTexture(c); (scene.background as THREE.Texture).colorSpace = THREE.SRGBColorSpace;
++}
+ scene.add(new THREE.HemisphereLight(0xddeeff, 0x3a5a30, 0.7));
+ const sun = new THREE.DirectionalLight(0xfff4e0, 2.0);
+ sun.position.set(30, 60, 25); sun.castShadow = true;

@@ -1,27 +1,27 @@
 # Kid check — Blast Ball
 Apply with `npm run fixes -- apply blast-ball <n>` (or `all`); undo with `npm run fixes -- undo blast-ball <n>`. Each patch was made against the same base and all five were tested applied together.
 
-## ⬜ 1. "It says right click is SHOOT but it kicks the ball! And I can't even read it."
-- **What you see:** when you have the ball, a tiny grey line under your feet says "hold RIGHT CLICK to shoot", but shooting is left click and right click kicks.
-- **Why:** wrong verb in the hint text, 9px grey font with no background.
-- **Fix (staged):** "⚽ YOUR BALL — hold RIGHT CLICK or SPACE to KICK" in yellow 13px text on a dark pill.
+## ⬜ 1. "The ground outside the stadium is all brown and muddy."
+- **What you see:** on the title screen, the land around the stadium is a flat olive-brown plain.
+- **Why:** the grass texture is tinted `0x9ab08a`, which multiplies it down to mud.
+- **Fix (staged):** tint it fresh green (`0x5f9a48`). 1 line.
 
-## ⬜ 2. "I didn't see the countdown, the game just started!"
-- **What you see:** the 3-2-1 before kickoff is a 12px grey digit under the scoreboard.
-- **Why:** the countdown reuses the small `#sub` status line.
-- **Fix (staged):** a 96px countdown in the middle of the screen, then a "GO!" banner with the whistle.
+## ⬜ 2. "The walls around the pitch are rainbow colours, it looks messy."
+- **What you see:** the boards round the pitch go yellow, red, pink, purple, light blue, and look washed out.
+- **Why:** each board gets a different hue (`i / 6`) at a pale lightness.
+- **Fix (staged):** alternate the two team colours (orange / blue), deeper so they survive the stadium lighting. ~4 lines.
 
-## ⬜ 3. "What are those bars at the bottom? The top one is always empty."
-- **What you see:** three unlabelled bars under your player; the top one (armor) stays empty until you pick up armor.
-- **Why:** no labels, and the armor bar is shown at 0.
-- **Fix (staged):** HEALTH / SPRINT / ARMOR labels; the armor bar appears only once you have armor.
+## ⬜ 3. "The stadium lights are just white boxes on sticks."
+- **What you see:** the four floodlight heads are blank white rectangles.
+- **Why:** each head is a single flat white box.
+- **Fix (staged):** a dark frame with a 4×2 grid of bright lamps facing the pitch. ~5 lines.
 
-## ⬜ 4. "The corner says people got knocked out before I even started!"
-- **What you see:** at kickoff, the knockout list in the top right already shows entries like "OLA PISTOL VIPER".
-- **Why:** the AI match playing behind the title menu writes to the same list, and starting a match doesn't clear it.
-- **Fix (staged):** the menu match no longer posts to the list, and every match (rematches too) starts with an empty one.
+## ⬜ 4. "The sky is just one boring blue."
+- **What you see:** the top half of the screen is a single flat light-blue colour.
+- **Why:** the scene background is a solid colour.
+- **Fix (staged):** a gradient sky, deep blue overhead fading to a pale haze at the horizon. ~5 lines.
 
-## ⬜ 5. "The words on the start screen are too small to read."
-- **What you see:** the controls on the menu are 9px white text straight over the busy stadium.
-- **Why:** tiny font, no backing.
-- **Fix (staged):** 11px text on a dark panel, fits on three lines at 1280px.
+## ⬜ 5. "The little map is see-through so the crowd shows through it."
+- **What you see:** when you look toward the stands, coloured crowd blocks show through the minimap in the top left.
+- **Why:** the map is drawn at 75% opacity with a faint border.
+- **Fix (staged):** a solid map with a crisp white rounded border. 2 lines.

@@ -1,36 +1,17 @@
-diff --git a/games/blast-ball/index.html b/games/blast-ball/index.html
-index 986e1ca..6a76163 100644
---- a/games/blast-ball/index.html
-+++ b/games/blast-ball/index.html
-@@ -30,8 +30,8 @@
-     .dn { position: absolute; transform: translate(-50%, -50%); font-size: 12px; animation: dn .7s ease-out forwards; }
-     @keyframes dn { from { margin-top: 0; opacity: 1; } to { margin-top: -40px; opacity: 0; } }
-     .status { bottom: 18px; left: 50%; transform: translateX(-50%); width: 300px; }
--    .bar { height: 12px; background: #0009; border: 2px solid #fff4; margin-top: 4px; } .bar div { height: 100%; transition: width .15s; }
--    .bar.armor { height: 6px; } #ar { background: #66aaff; } #hp { background: linear-gradient(#ff5a5a, #c01818); } .bar.st { height: 5px; } #st { background: #eee; }
-+    .bar { position: relative; height: 12px; background: #0009; border: 2px solid #fff4; margin-top: 4px; } .bar::before { content: attr(data-l); position: absolute; right: calc(100% + 10px); top: 50%; transform: translateY(-50%); font-size: 9px; color: #fff; text-shadow: 2px 2px 0 #000; } .bar div { height: 100%; transition: width .15s; }
-+    .bar.armor { height: 8px; } #ar { background: #66aaff; } #hp { background: linear-gradient(#ff5a5a, #c01818); } .bar.st { height: 8px; } #st { background: #eee; }
-     .weap { bottom: 18px; right: 18px; text-align: right; line-height: 2; } #ammo { font-size: 26px; } #gloo { color: #bff4ff; font-size: 10px; }
-     #banner { top: 26%; left: 0; right: 0; text-align: center; font-size: 56px; opacity: 0; text-shadow: 4px 4px 0 #000a; line-height: 1.3; }
-     #banner small { font-size: 16px; color: #fff; }
-diff --git a/games/blast-ball/main.ts b/games/blast-ball/main.ts
-index 434bb7b..5cc7ff0 100644
---- a/games/blast-ball/main.ts
-+++ b/games/blast-ball/main.ts
-@@ -97,7 +97,7 @@ hud.innerHTML = `
-   <div id="cross"><i></i><i></i><i></i><i></i></div><div id="hitx">✕</div>
-   <div id="charge"><div id="chargeFill"></div></div>
-   <div id="dmg"></div>
--  <div class="status"><div class="bar armor"><div id="ar"></div></div><div class="bar hp"><div id="hp"></div></div><div class="bar st"><div id="st"></div></div></div>
-+  <div class="status"><div class="bar armor" data-l="ARMOR"><div id="ar"></div></div><div class="bar hp" data-l="HEALTH"><div id="hp"></div></div><div class="bar st" data-l="SPRINT"><div id="st"></div></div></div>
-   <div class="weap"><div id="wname">PISTOL</div><div id="ammo">∞</div><div id="gloo">GLOO ×2 [G]</div></div>
-   <div id="banner"></div><div id="note"></div><div id="ballhint"></div>
-   <div class="ov" id="menu"><h1>BLAST<span>BALL</span></h1><p class="sub">3v3 football. Everyone's armed.</p>
-@@ -518,6 +518,7 @@ loop((rawDt, time) => {
-     $('clock').classList.toggle('low', !M.golden && M.time < 30);
-     $('hp').style.width = `${(Math.max(0, human.hp) / HEALTH.max) * 100}%`;
-     $('ar').style.width = `${(human.armor / HEALTH.armorMax) * 100}%`;
-+    $('ar').parentElement!.style.visibility = human.armor > 0 ? 'visible' : 'hidden';   // no empty bar until you pick up armor
-     $('st').style.width = `${(human.stamina / 100) * 100}%`;
-     $('wname').textContent = WEAPONS[human.weapon].name + (human.special && human.weapon === 'pistol' ? ` · [Q] ${WEAPONS[human.special].name}` : '');
-     $('ammo').textContent = human.weapon === 'pistol' ? '∞' : String(human.ammo);
+diff --git a/games/blast-ball/pitch.ts b/games/blast-ball/pitch.ts
+index 845e085..9278a44 100644
+--- a/games/blast-ball/pitch.ts
++++ b/games/blast-ball/pitch.ts
+@@ -127,7 +127,11 @@ export class Stadium {
+     for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+       const tx = x * (HALF_W + 18), tz = z * (HALF_L + 16);
+       const pole = new THREE.Mesh(new THREE.BoxGeometry(0.8, 26, 0.8), standMat); pole.position.set(tx, 13, tz); scene.add(pole);
+-      const head = new THREE.Mesh(new THREE.BoxGeometry(5, 2.5, 0.6), new THREE.MeshBasicMaterial({ color: 0xfffbe0 })); head.position.set(tx, 26, tz); head.lookAt(0, 0, 0); scene.add(head);
++      const head = new THREE.Mesh(new THREE.BoxGeometry(5.4, 2.9, 0.6), standMat); head.position.set(tx, 26, tz); head.lookAt(0, 0, 0); scene.add(head);
++      // a 4×2 grid of lamps on the pitch-facing side, so they read as lights, not blank boxes
++      for (let c = 0; c < 4; c++) for (let r = 0; r < 2; r++) {
++        const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.5, 12), new THREE.MeshBasicMaterial({ color: 0xfff6c8 })); lamp.position.set(-1.95 + c * 1.3, -0.65 + r * 1.3, 0.31); head.add(lamp);
++      }
+     }
+ 
+     // zone walls: blue storm closing in from the sidelines

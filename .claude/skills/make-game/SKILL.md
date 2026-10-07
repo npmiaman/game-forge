@@ -55,7 +55,7 @@ Done means all of:
 
 ## 6. Kid check
 
-Run the `kid-check` skill: find the 5 UI problems a kid would notice, stage a tested fix for each (`npm run fixes`), and list them in chat so the user can say "fix 2" and get it instantly.
+Run the `kid-check` skill: find the 5 things a kid would say look wrong, stage a small tested fix for each (`npm run fixes`), and list them in chat so the user can say "fix 2" and get it instantly.
 
 ## 7. Hand off
 

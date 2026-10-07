@@ -40,7 +40,7 @@ Then open the folder in Claude Code and say what you want:
 
 Claude picks the closest template, scaffolds `games/<your-game>/`, builds it, bot-playtests it, reads the screenshots, fixes what's broken, and tells you how to play it.
 
-Then it runs a **kid check**: it plays the game the way a kid would, lists the **5 UI problems anyone would point out** (*"I didn't see the countdown"*, *"what do those bars mean?"*), and has a tested fix for each one staged as a patch. Say *"fix 2"* or *"fix all"* and it lands instantly — see [games/blast-ball/FIXES.md](games/blast-ball/FIXES.md) for an example.
+Then it runs a **kid check**: it plays the game the way a kid would, lists the **5 things anyone would say look wrong** (*"the sky is just one boring blue"*, *"the lights are just white boxes"*), and has a small, tested fix for each one staged as a patch. Say *"fix 2"* or *"fix all"* and it lands instantly — see [games/blast-ball/FIXES.md](games/blast-ball/FIXES.md) for an example.
 
 ## The vibe-coding loop
 
