@@ -1,32 +1,20 @@
 diff --git a/games/blast-ball/main.ts b/games/blast-ball/main.ts
-index 434bb7b..930e1ea 100644
+index 434bb7b..26ff232 100644
 --- a/games/blast-ball/main.ts
 +++ b/games/blast-ball/main.ts
-@@ -132,7 +132,7 @@ type State = 'menu' | 'kickoff' | 'play' | 'goal' | 'over' | 'paused';
- let state: State = 'menu';
- let resumeState: State = 'play';
- const M = { length: MATCH.seconds, time: MATCH.seconds, score: [0, 0], golden: false, kickoffT: 0, goalT: 0, airdropT: MATCH.airdropEvery, lootT: 4, zoneHalf: HALF_W, excite: 0, slow: 1 };
--const cam = { yaw: 0, pitch: -0.12 };
-+const cam = { yaw: 0, pitch: -0.12, dead: 0 };   // dead: 0→1 blend to the knocked-out view
- let charge = -1;   // kick charge time, -1 = not charging
- 
- function zoneHalfAt(elapsed: number) {
-@@ -496,12 +496,15 @@ loop((rawDt, time) => {
-   } else {
-     const followYaw = q.has('auto') ? human.yaw : cam.yaw;
-     if (q.has('auto')) cam.yaw = followYaw;
--    const back = 5.6, side = 1.35, up = 2.7;
-+    // knocked out: rise up and back so you look down at your body instead of sitting inside it
-+    cam.dead = damp(cam.dead, human.alive ? 0 : 1, 4, rawDt);
-+    const back = lerp(5.6, 8, cam.dead), side = lerp(1.35, 0, cam.dead), up = lerp(2.7, 4, cam.dead);
-+    const pitch = lerp(cam.pitch, -0.6, cam.dead);
-     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
--    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
-+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
-     const px = human.x - fx * back * cp + rx * side, pz = human.z - fz * back * cp + rz * side, py = up - sp * back;
-     camera.position.set(px, Math.max(0.6, py), pz);
--    camera.rotation.set(cam.pitch, cam.yaw, 0, 'YXZ');
-+    camera.rotation.set(pitch, cam.yaw, 0, 'YXZ');
-     camera.getWorldDirection(fwd);
-   }
-   // don't let other players fill the screen when they walk into the camera
+@@ -113,6 +113,7 @@ let bannerT = 0, noteT = 0, hitT = 0;
+ function banner(html: string, secs = 2.2) { const b = $('banner'); b.innerHTML = html; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); bannerT = secs; }
+ function note(text: string, secs = 2.5, color = '#fff') { const n = $('note'); n.textContent = text; n.style.color = color; n.style.opacity = '1'; noteT = secs; }
+ function feed(html: string) {
++  if (state === 'menu') return;   // the attract match behind the title shouldn't leave entries for your kickoff
+   const el = document.createElement('div'); el.innerHTML = html; $('feed').prepend(el);
+   setTimeout(() => el.classList.add('fade'), 4000); setTimeout(() => el.remove(), 4600);
+   while ($('feed').children.length > 6) $('feed').lastElementChild!.remove();
+@@ -164,6 +165,7 @@ function startMatch() {
+   rockets.forEach((r) => scene.remove(r.mesh)); rockets = [];
+   if (q.get('gun')) human.equip(q.get('gun') as WeaponId);
+   $('menu').classList.add('hidden'); $('end').classList.add('hidden');
++  $('feed').innerHTML = '';   // fresh kill feed every match (rematches too)
+   hud.classList.add('playing');
+   if (!music.playing) music.play(SONGS.synthwave);
+   music.setIntensity(1);

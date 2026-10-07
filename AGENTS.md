@@ -4,7 +4,7 @@ A browser-game workshop: shared kit + genre templates + headless playtesting, so
 
 **First run in a fresh clone:** if `node_modules/` is missing, run `npm run setup` (installs deps + headless Chromium for playtests). Node ≥ 20.19.
 
-**To build a new game, follow `.claude/skills/make-game/SKILL.md`** (design → scaffold → core verb → loop → playtest → hand-off) and its checklist `.claude/skills/make-game/game-feel.md`. Other procedures in `.claude/skills/`: `kid-check/` (5 kid-obvious problems + staged fixes), `playtest/`, `polish/`, `ship/`, and `phaser4/` (Phaser API router).
+**To build a new game, follow `.claude/skills/make-game/SKILL.md`** (design → scaffold → core verb → loop → playtest → hand-off) and its checklist `.claude/skills/make-game/game-feel.md`. Other procedures in `.claude/skills/`: `kid-check/` (5 kid-obvious UI problems + staged fixes), `playtest/`, `polish/`, `ship/`, and `phaser4/` (Phaser API router).
 
 **Working on an existing game: read `games/<slug>/GAME.md` first and update it when you change the design.** It is that game's memory across sessions.
 
@@ -37,7 +37,7 @@ A browser-game workshop: shared kit + genre templates + headless playtesting, so
 
 ## Kid check & staged fixes
 
-Every game build ends with a kid check (`.claude/skills/kid-check/SKILL.md`): 5 problems a kid would point out, each with a fix already implemented, tested and saved as `games/<slug>/fixes/<n>.patch`, listed in `games/<slug>/FIXES.md`. **When the user says "fix 2" / "fix all" / names a listed problem, run `npm run fixes -- apply <slug> <n|all>`** — don't re-implement it.
+Every game build ends with a kid check (`.claude/skills/kid-check/SKILL.md`): 5 UI problems a kid would point out (menus, HUD, text, labels, prompts; not gameplay), each with a fix already implemented, tested and saved as `games/<slug>/fixes/<n>.patch`, listed in `games/<slug>/FIXES.md`. **When the user says "fix 2" / "fix all" / names a listed problem, run `npm run fixes -- apply <slug> <n|all>`** — don't re-implement it.
 
 ## Commands
 

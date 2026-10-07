@@ -16,10 +16,10 @@ Apply with `npm run fixes -- apply blast-ball <n>` (or `all`); undo with `npm ru
 - **Why:** no labels, and the armor bar is shown at 0.
 - **Fix (staged):** HEALTH / SPRINT / ARMOR labels; the armor bar appears only once you have armor.
 
-## ⬜ 4. "When I get knocked out the camera goes inside my body!"
-- **What you see:** after a knockout, the screen fills with your own fallen character's back for 4 seconds.
-- **Why:** the third-person camera keeps its normal offset while the body lies flat right in front of it.
-- **Fix (staged):** while knocked out, the camera smoothly rises up and back and looks down at your body and the pitch, then returns when you respawn.
+## ⬜ 4. "The corner says people got knocked out before I even started!"
+- **What you see:** at kickoff, the knockout list in the top right already shows entries like "OLA PISTOL VIPER".
+- **Why:** the AI match playing behind the title menu writes to the same list, and starting a match doesn't clear it.
+- **Fix (staged):** the menu match no longer posts to the list, and every match (rematches too) starts with an empty one.
 
 ## ⬜ 5. "The words on the start screen are too small to read."
 - **What you see:** the controls on the menu are 9px white text straight over the busy stadium.

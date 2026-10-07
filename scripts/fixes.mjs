@@ -80,6 +80,9 @@ if (cmd === 'start') {
     if (!existsSync(patchFile(n))) { console.error(`✖ no staged fix #${n} (fixes/${n}.patch)`); failed++; continue; }
     const args = ['apply', '--whitespace=nowarn', ...(cmd === 'undo' ? ['-R'] : []), rel(patchFile(n))];
     const check = git([...args.slice(0, 2), '--check', ...args.slice(2)]);
+    // already in the requested state (applied twice, or undoing one that was never applied) → skip quietly
+    const opposite = git(['apply', '--check', ...(cmd === 'undo' ? [] : ['-R']), rel(patchFile(n))]);
+    if (check.status !== 0 && opposite.status === 0) { console.log(`· fix #${n} ${cmd === 'apply' ? 'is already applied' : "isn't applied"}`); continue; }
     if (check.status !== 0) {
       console.error(`✖ fix #${n} doesn't apply cleanly (it overlaps an earlier change). Re-implement it from its plan in FIXES.md.\n${check.stderr.trim().split('\n').slice(0, 4).join('\n')}`);
       failed++; continue;
