@@ -4,12 +4,23 @@ Every asset in this folder is public domain (CC0). Credit is appreciated but not
 
 | Asset | Source | License |
 |---|---|---|
+| KayKit — adventurers | https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0 | CC0 |
+| KayKit — city-builder | https://github.com/KayKit-Game-Assets/KayKit-City-Builder-Bits-1.0 | CC0 |
+| KayKit — dungeon-remastered | https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0 | CC0 |
+| KayKit — halloween-bits | https://github.com/KayKit-Game-Assets/KayKit-Halloween-Bits-1.0 | CC0 |
+| KayKit — medieval-hexagon | https://github.com/KayKit-Game-Assets/KayKit-Medieval-Hexagon-Pack-1.0 | CC0 |
+| KayKit — prototype-bits | https://github.com/KayKit-Game-Assets/KayKit-Prototype-Bits-1.0 | CC0 |
+| KayKit — skeletons | https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Skeletons-1.0 | CC0 |
+| KayKit — space-base | https://github.com/KayKit-Game-Assets/KayKit-Space-Base-Bits-1.0 | CC0 |
 | Kenney — blaster-kit | https://kenney.nl/assets/blaster-kit | CC0 |
+| Kenney — blocky-characters | https://kenney.nl/assets/blocky-characters | CC0 |
 | Kenney — car-kit | https://kenney.nl/assets/car-kit | CC0 |
 | Kenney — casino-audio | https://kenney.nl/assets/casino-audio | CC0 |
+| Kenney — castle-kit | https://kenney.nl/assets/castle-kit | CC0 |
 | Kenney — city-kit-roads | https://kenney.nl/assets/city-kit-roads | CC0 |
 | Kenney — city-kit-suburban | https://kenney.nl/assets/city-kit-suburban | CC0 |
 | Kenney — digital-audio | https://kenney.nl/assets/digital-audio | CC0 |
+| Kenney — fantasy-town-kit | https://kenney.nl/assets/fantasy-town-kit | CC0 |
 | Kenney — food-kit | https://kenney.nl/assets/food-kit | CC0 |
 | Kenney — furniture-kit | https://kenney.nl/assets/furniture-kit | CC0 |
 | Kenney — game-icons | https://kenney.nl/assets/game-icons | CC0 |

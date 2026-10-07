@@ -17,11 +17,11 @@ All games were built by Claude in this repo from short prompts, using the shared
 
 ![Asset library](docs/screenshots/asset-library.jpg)
 
-**~1,700 3D models · ~1,900 sprites · ~670 sounds · 16 photoreal textures · 6 HDRI skies**, all CC0 (free for commercial use, no attribution required) — from [Kenney](https://kenney.nl) and [Poly Haven](https://polyhaven.com). Animated characters (walk, run, shoot, kick, die…), zombies and skeletons, cars, guns, furniture, nature, castles, space, food, dungeons, platformer tiles, UI, icons, footsteps, impacts, lasers, explosions, door creaks, an announcer voice, and more.
+**~2,700 3D models · ~1,900 sprites · ~670 sounds · 16 photoreal textures · 6 HDRI skies**, all CC0 (free for commercial use, no attribution required) — from [Kenney](https://kenney.nl), [KayKit](https://kaylousberg.com) and [Poly Haven](https://polyhaven.com). Animated characters (walk, run, shoot, kick, die…), zombies and skeletons, cars, guns, furniture, nature, castles, space, food, dungeons, platformer tiles, UI, icons, footsteps, impacts, lasers, explosions, door creaks, an announcer voice, and more.
 
 - Browse it at **`/assets.html`** (link on the arcade page): search, spin models in 3D, play their animations, listen to sounds, copy names.
 - Claude reads `assets/CATALOG.md` and uses the library automatically when it builds a game.
-- Need something else? `npm run assets -- add <kenney-pack>` or `npm run assets -- texture <polyhaven-id>` pulls it in, ready to use.
+- Need something else? `npm run assets -- add <kenney-pack>`, `npm run assets -- kaykit <pack>`, or `npm run assets -- texture <polyhaven-id>` pulls it in, ready to use.
 
 ## Quick start
 
@@ -39,6 +39,8 @@ Then open the folder in Claude Code and say what you want:
 > *make a game where you're a bee defending a hive from wasps, with roguelite upgrades*
 
 Claude picks the closest template, scaffolds `games/<your-game>/`, builds it, bot-playtests it, reads the screenshots, fixes what's broken, and tells you how to play it.
+
+Then it runs a **kid check**: it plays the game the way a kid would, lists the **5 things anyone would say look wrong** (*"the sky is just one boring blue"*, *"the lights are just white boxes"*), and has a small, tested fix for each one staged as a patch. Say *"fix 2"* or *"fix all"* and it lands instantly — see [games/blast-ball/FIXES.md](games/blast-ball/FIXES.md) for an example.
 
 ## The vibe-coding loop
 
@@ -58,6 +60,7 @@ Each game keeps a `GAME.md` design doc that Claude reads and updates, so you can
 | `/playtest <slug>` | bot-plays the game, reads screenshots, fixes what's broken |
 | `/polish <slug>` | walks the game-feel checklist and adds missing juice |
 | `/ship <slug>` | checks, builds, and zips the game for itch.io |
+| *"fix 2"* / *"fix all"* | applies the staged kid-check fixes (`games/<slug>/FIXES.md`) |
 
 A hook type-checks after every edit Claude makes and feeds errors straight back, so broken code never piles up.
 
@@ -73,6 +76,7 @@ A hook type-checks after every edit Claude makes and feeds errors straight back,
 | `npm run check` | type-check everything (~1 s) |
 | `npm run ship -- my-game` | standalone build + `ship/my-game.zip` |
 | `npm run assets -- add castle-kit` | import any Kenney pack (also `texture` / `hdri <polyhaven-id>`) |
+| `npm run fixes -- apply my-game 2` | apply a staged kid-check fix (`undo`, `list`, `all` too) |
 | `npm run build` | the whole arcade as a static site in `dist/` |
 
 VS Code users: **Tasks: Run Task** has all of these, and **F5** debugs a game in Chrome with breakpoints.
@@ -105,8 +109,8 @@ kit/            shared game kit — every file's header comment is its docs
   assets.ts       load library models/animations/textures/skies/sounds by name
 templates/      six genre starters
 games/          your games (each: index.html, main.ts, game.json, GAME.md)
-scripts/        new-game, play, shot (headless playtest), ship, assets (importer)
-.claude/        skills (make-game, playtest, polish, ship, phaser4) + type-check hook
+scripts/        new-game, play, shot (headless playtest), fixes (staged patches), ship, assets (importer)
+.claude/        skills (make-game, kid-check, playtest, polish, ship, phaser4) + type-check hook
 AGENTS.md       instructions for any coding agent (CLAUDE.md imports it)
 ```
 

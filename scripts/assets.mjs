@@ -4,6 +4,7 @@
  *
  *   npm run assets -- add car-kit furniture-kit       # Kenney packs by slug (kenney.nl/assets/<slug>)
  *   npm run assets -- add car-kit --from ./downloads  # use an already-downloaded/unzipped pack dir
+ *   npm run assets -- kaykit adventurers skeletons   # KayKit packs (github.com/KayKit-Game-Assets), e.g. medieval-hexagon
  *   npm run assets -- texture wood_floor_worn         # Poly Haven PBR texture (1k: diffuse, normal, rough)
  *   npm run assets -- hdri kloofendal_48d_partly_cloudy_puresky   # Poly Haven HDRI sky (1k)
  *   npm run assets -- catalog                          # rebuild assets/CATALOG.md + assets/catalog.json
@@ -22,6 +23,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { dedup, prune, resample } from '@gltf-transform/functions';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const A = join(root, 'assets');
@@ -92,6 +94,39 @@ async function addKenney(slug) {
   const lic = files.find((f) => /^license\.txt$/i.test(basename(f)));
   writeLicense(`Kenney — ${slug}`, `https://kenney.nl/assets/${slug}`, lic ? readFileSync(lic, 'utf8').match(/License:?\s*\(?([^)\n]+)/i)?.[1]?.trim() ?? 'CC0' : 'CC0');
   console.log(`✔ ${slug}: ${summary}`);
+}
+
+// ---------------------------------------------------------------- KayKit (Kay Lousberg, CC0, on GitHub)
+const KAYKIT = {
+  adventurers: 'Character-Pack-Adventures', skeletons: 'Character-Pack-Skeletons', 'medieval-hexagon': 'Medieval-Hexagon-Pack',
+  'dungeon-remastered': 'Dungeon-Remastered', 'city-builder': 'City-Builder-Bits', 'prototype-bits': 'Prototype-Bits', 'halloween-bits': 'Halloween-Bits',
+  'restaurant-bits': 'Restaurant-Bits', 'furniture-bits': 'Furniture-Bits', 'space-base': 'Space-Base-Bits',
+};
+async function addKayKit(name) {
+  const repo = KAYKIT[name];
+  if (!repo) throw new Error(`unknown KayKit pack "${name}" — one of: ${Object.keys(KAYKIT).join(', ')}`);
+  const tmp = mkdtempSync(join(tmpdir(), 'kaykit-'));
+  process.stdout.write(`  ↓ kaykit-${name} … `);
+  await download(`https://codeload.github.com/KayKit-Game-Assets/KayKit-${repo}-1.0/zip/HEAD`, join(tmp, 'pack.zip'));
+  unzip(join(tmp, 'pack.zip'), join(tmp, 'x'));
+  const files = walk(join(tmp, 'x'));
+  // one copy of each model: prefer .glb, else .gltf (+ .bin + png); skip fbx/obj/engine folders
+  const models = new Map();
+  for (const f of files.filter((f) => /\.(glb|gltf)$/i.test(f) && !/(fbx|obj|godot|unity)/i.test(dirname(relative(tmp, f))))) {
+    const id = basename(f).replace(/\.(glb|gltf)$/i, '').toLowerCase().replace(/[\s_]+/g, '-');
+    if (!models.has(id) || f.endsWith('.glb')) models.set(id, f);
+  }
+  const slug = `kaykit-${name}`, out = join(A, 'models', slug);
+  rmSync(out, { recursive: true, force: true }); mkdirSync(out, { recursive: true });
+  for (const [id, f] of models) {
+    const doc = await io.read(f);
+    await doc.transform(resample(), dedup(), prune());   // drop redundant keyframes → animated rigs shrink a lot
+    await io.write(join(out, `${id}.glb`), doc);
+  }
+  const lic = files.find((f) => /^license\.txt$/i.test(basename(f)));
+  writeLicense(`KayKit — ${name}`, `https://github.com/KayKit-Game-Assets/KayKit-${repo}-1.0`, lic && /CC0|Zero/i.test(readFileSync(lic, 'utf8')) ? 'CC0' : 'see repo');
+  rmSync(tmp, { recursive: true, force: true });
+  console.log(`✔ ${slug}: ${models.size} models`);
 }
 
 // ---------------------------------------------------------------- Poly Haven
@@ -180,6 +215,7 @@ try {
   // one bad id shouldn't abort a batch
   const each = async (fn) => { let failed = 0; for (const n of names) { try { await fn(n); } catch (e) { failed++; console.error(`✖ ${n}: ${e.message}`); } } catalog(); if (failed) process.exitCode = 1; };
   if (cmd === 'add') await each(addKenney);
+  else if (cmd === 'kaykit') await each(addKayKit);
   else if (cmd === 'texture') await each((id) => polyhaven(id, 'texture'));
   else if (cmd === 'hdri') await each((id) => polyhaven(id, 'hdri'));
   else if (cmd === 'catalog') catalog();
