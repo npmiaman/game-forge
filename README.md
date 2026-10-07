@@ -17,11 +17,11 @@ All games were built by Claude in this repo from short prompts, using the shared
 
 ![Asset library](docs/screenshots/asset-library.jpg)
 
-**~1,700 3D models · ~1,900 sprites · ~670 sounds · 16 photoreal textures · 6 HDRI skies**, all CC0 (free for commercial use, no attribution required) — from [Kenney](https://kenney.nl) and [Poly Haven](https://polyhaven.com). Animated characters (walk, run, shoot, kick, die…), zombies and skeletons, cars, guns, furniture, nature, castles, space, food, dungeons, platformer tiles, UI, icons, footsteps, impacts, lasers, explosions, door creaks, an announcer voice, and more.
+**~2,700 3D models · ~1,900 sprites · ~670 sounds · 16 photoreal textures · 6 HDRI skies**, all CC0 (free for commercial use, no attribution required) — from [Kenney](https://kenney.nl), [KayKit](https://kaylousberg.com) and [Poly Haven](https://polyhaven.com). Animated characters (walk, run, shoot, kick, die…), zombies and skeletons, cars, guns, furniture, nature, castles, space, food, dungeons, platformer tiles, UI, icons, footsteps, impacts, lasers, explosions, door creaks, an announcer voice, and more.
 
 - Browse it at **`/assets.html`** (link on the arcade page): search, spin models in 3D, play their animations, listen to sounds, copy names.
 - Claude reads `assets/CATALOG.md` and uses the library automatically when it builds a game.
-- Need something else? `npm run assets -- add <kenney-pack>` or `npm run assets -- texture <polyhaven-id>` pulls it in, ready to use.
+- Need something else? `npm run assets -- add <kenney-pack>`, `npm run assets -- kaykit <pack>`, or `npm run assets -- texture <polyhaven-id>` pulls it in, ready to use.
 
 ## Quick start
 
