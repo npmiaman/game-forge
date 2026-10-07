@@ -22,17 +22,28 @@ A browser-game workshop: shared kit + genre templates + headless playtesting, so
 - `kit/assets.ts` — the asset library loader (models + animations, PBR textures, HDRI, recorded sounds, URLs). Works in dev, builds and itch.io zips.
 - Each kit file's header comment is its usage doc. Read it before using the module.
 - `templates/` — `blank`, `topdown`, `platformer`, `puzzle`, `physics`, `3d`. Each is a complete, playtested game; `npm run new` with no args describes them.
-- Reference games: `games/neon-swarm` (polished 2D: pools + spatial hash, waves, upgrades, overlay scenes), `games/block-racer` (3D voxel racing: chunked InstancedMesh world, texture atlas, arcade drift physics), `games/hollow-house` (first-person horror: pointer lock, grid A* AI with hearing/sight, hiding, spatial audio).
+- Reference games: `games/neon-swarm` (polished 2D: pools + spatial hash, waves, upgrades, overlay scenes), `games/block-racer` (3D voxel racing: chunked InstancedMesh world, texture atlas, arcade drift physics), `games/hollow-house` (first-person horror: pointer lock, grid A* AI with hearing/sight, hiding, spatial audio), `games/siteline` (tactical FPS: hitscan with spread/recoil, abilities, round economy, defender AI), `games/banner-raid` (Clash-style raids: KayKit troops, A* through walls, defenses, camp upgrades).
 
 ## Asset library (`assets/`, all CC0)
 
-~1,700 3D models, ~1,900 sprites, ~670 sounds, 16 PBR textures, 6 HDRI skies — Kenney packs + Poly Haven.
+~2,700 3D models, ~1,900 sprites, ~670 sounds, 16 PBR textures, 6 HDRI skies — Kenney + KayKit packs + Poly Haven.
 - **Find things:** `assets/CATALOG.md` (every name, grouped by pack; animated rigs list their clips), or `/assets.html` in the dev server (thumbnails, 3D preview with animations, sound playback, copy-to-clipboard ids).
 - **Use them by default for anything representational** — characters, props, vehicles, furniture, weapons, environments, footsteps, impacts, UI clicks, announcer lines. Procedural art (`kit/phaser/textures.ts`, ZzFX) is for abstract/neon styles and effects.
 - **Load with `kit/assets.ts`:** `loadModel('car-kit/race', { height })`, `animate(model).play('walk')`, `loadTexture('wood_floor_worn', { repeat })`, `loadHdri(scene, 'stadium_01')`, `sound.play('impact-sounds/footstep_wood_*')` (`*` = random variant), `assetUrl('sprites/…')` for Phaser `load.spritesheet` (in a `preload`, e.g. `menuScene({ preload })`).
-- **Add more:** `npm run assets -- add <kenney-slug>` (any pack on kenney.nl/assets), `npm run assets -- texture|hdri <polyhaven-id>`. Catalog regenerates automatically.
+- **Add more:** `npm run assets -- add <kenney-slug>` (any pack on kenney.nl/assets), `npm run assets -- kaykit <pack>` (the KayKit packs on GitHub), `npm run assets -- texture|hdri <polyhaven-id>`. Only import CC0 — the repo redistributes every asset. Catalog regenerates automatically.
 - Refer to assets with **string literals** (`'pack/name'`, or a template prefix like `` `voiceover-pack/${line}` ``) — `npm run ship` copies only assets it can find referenced in the game's source.
-- Kenney GLB models face **+z** (rotate π if your forward is −z). The mini-characters / graveyard characters share one rig: `idle walk sprint jump die crouch attack-melee-right attack-kick-right holding-both holding-both-shoot …`. Attach props (guns, tools) in the character root's space at hand height rather than to the arm bone — the bone's axes swing with each clip.
+- **Characters — pick the pack that fits the game, and don't reuse the last game's pack by default:**
+
+  | Pack | Look | Animations |
+  |---|---|---|
+  | `kaykit-adventurers` | chunky fantasy heroes: knight, barbarian, mage, rogue (+ swords, shields, staffs, bows) | 76: melee/ranged/spell attacks, block, dodge, cheer, hit, death, run, walk |
+  | `kaykit-skeletons` | skeleton warrior, mage, rogue, minion (+ weapons) | same 76 + resurrect |
+  | `blocky-characters` | 18 Minecraft-ish blocky people | Kenney rig (below) |
+  | `mini-characters` | 12 cute modern people | Kenney rig (below) |
+  | `graveyard-kit` | zombies, skeleton, ghost, vampire | Kenney rig (below) |
+
+  KayKit clips are named like `Running_A`, `1H_Melee_Attack_Chop`, `Death_A`; their rig has `handslot.r` / `handslot.l` bones for weapons. Buildings/worlds: `kaykit-medieval-hexagon` (castles, barracks, towers, homes in 4 team colours), `castle-kit`, `fantasy-town-kit`, `kaykit-dungeon-remastered`, `kaykit-halloween-bits`, `kaykit-city-builder`, `kaykit-space-base`, `kaykit-prototype-bits`.
+- Kenney GLB models face **+z** (rotate π if your forward is −z). The mini-characters / blocky-characters / graveyard characters share one rig: `idle walk sprint jump die crouch attack-melee-right attack-kick-right holding-both holding-both-shoot …`. Attach props (guns, tools) in the character root's space at hand height rather than to the arm bone — the bone's axes swing with each clip.
 - Pixel tilesheets: `pixel-platformer` tiles are 18px (20 per row), characters 24px; draw at an integer scale (2×) with `pixelArt: true`. See `templates/platformer/art.ts`.
 
 ## Kid check & staged fixes
