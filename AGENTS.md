@@ -4,7 +4,7 @@ A browser-game workshop: shared kit + genre templates + headless playtesting, so
 
 **First run in a fresh clone:** if `node_modules/` is missing, run `npm run setup` (installs deps + headless Chromium for playtests). Node ≥ 20.19.
 
-**To build a new game, follow `.claude/skills/make-game/SKILL.md`** (design → scaffold → core verb → loop → playtest → hand-off) and its checklist `.claude/skills/make-game/game-feel.md`. Other procedures in `.claude/skills/`: `playtest/`, `polish/`, `ship/`, and `phaser4/` (Phaser API router).
+**To build a new game, follow `.claude/skills/make-game/SKILL.md`** (design → scaffold → core verb → loop → playtest → hand-off) and its checklist `.claude/skills/make-game/game-feel.md`. Other procedures in `.claude/skills/`: `kid-check/` (5 kid-obvious problems + staged fixes), `playtest/`, `polish/`, `ship/`, and `phaser4/` (Phaser API router).
 
 **Working on an existing game: read `games/<slug>/GAME.md` first and update it when you change the design.** It is that game's memory across sessions.
 
@@ -35,9 +35,13 @@ A browser-game workshop: shared kit + genre templates + headless playtesting, so
 - Kenney GLB models face **+z** (rotate π if your forward is −z). The mini-characters / graveyard characters share one rig: `idle walk sprint jump die crouch attack-melee-right attack-kick-right holding-both holding-both-shoot …`. Attach props (guns, tools) in the character root's space at hand height rather than to the arm bone — the bone's axes swing with each clip.
 - Pixel tilesheets: `pixel-platformer` tiles are 18px (20 per row), characters 24px; draw at an integer scale (2×) with `pixelArt: true`. See `templates/platformer/art.ts`.
 
+## Kid check & staged fixes
+
+Every game build ends with a kid check (`.claude/skills/kid-check/SKILL.md`): 5 problems a kid would point out, each with a fix already implemented, tested and saved as `games/<slug>/fixes/<n>.patch`, listed in `games/<slug>/FIXES.md`. **When the user says "fix 2" / "fix all" / names a listed problem, run `npm run fixes -- apply <slug> <n|all>`** — don't re-implement it.
+
 ## Commands
 
-`npm run new` (list) · `npm run new -- <slug> --template <t>` / `--from <game>` · `npm run play -- <slug> [query]` · `npm run shot -- <slug>` · `npm run check` · `npm run assets -- …` · `npm run ship -- <slug>` (itch.io zip, only the assets it uses) · `npm run build` (whole arcade + library)
+`npm run new` (list) · `npm run new -- <slug> --template <t>` / `--from <game>` · `npm run play -- <slug> [query]` · `npm run shot -- <slug>` · `npm run check` · `npm run assets -- …` · `npm run fixes -- start|save|apply|undo|list <slug> [n]` · `npm run ship -- <slug>` (itch.io zip, only the assets it uses) · `npm run build` (whole arcade + library)
 
 ## Playtesting
 

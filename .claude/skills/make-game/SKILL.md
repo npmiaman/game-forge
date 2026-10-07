@@ -53,6 +53,10 @@ Done means all of:
 - Every item in [game-feel.md](game-feel.md) is present or consciously skipped.
 - fps ≥ 55 in the `--gpu` run.
 
-## 6. Hand off
+## 6. Kid check
+
+Run the `kid-check` skill: find the 5 problems a kid would notice, stage a tested fix for each (`npm run fixes`), and list them in chat so the user can say "fix 2" and get it instantly.
+
+## 7. Hand off
 
 Tell the user: `npm run play -- <slug>` (opens it), the controls, `?tune` for live sliders, what you tuned for fun, what you'd add next. Update GAME.md's Status and Ideas.

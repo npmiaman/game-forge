@@ -1,0 +1,33 @@
+diff --git a/games/blast-ball/index.html b/games/blast-ball/index.html
+index 986e1ca..495f695 100644
+--- a/games/blast-ball/index.html
++++ b/games/blast-ball/index.html
+@@ -16,6 +16,7 @@
+     .score .o { background: #ff7a1a; } .score .b { background: #2a7fff; }
+     #clock { min-width: 64px; text-align: center; } #clock.low { color: #ff5050; }
+     #sub { top: 62px; left: 0; right: 0; text-align: center; color: #9fd8ff; font-size: 12px; }
++    #sub.count { top: 40%; font-size: 96px; color: #fff; text-shadow: 6px 6px 0 #000a; }
+     #map { top: 14px; left: 14px; border: 2px solid #fff5; image-rendering: pixelated; }
+     #feed { top: 14px; right: 14px; text-align: right; font-size: 9px; line-height: 2.2; font-family: system-ui, sans-serif; font-size: 13px; }
+     #feed div { background: #0008; padding: 2px 8px; margin-bottom: 4px; transition: opacity .6s; } #feed .fade { opacity: 0; } #feed .w { color: #ffd060; font-size: 11px; }
+diff --git a/games/blast-ball/main.ts b/games/blast-ball/main.ts
+index 434bb7b..d5027d5 100644
+--- a/games/blast-ball/main.ts
++++ b/games/blast-ball/main.ts
+@@ -143,6 +143,7 @@ function zoneHalfAt(elapsed: number) {
+ 
+ function kickoff(teamWithBall: number) {
+   state = 'kickoff'; M.kickoffT = MATCH.kickoffDelay;
++  $('sub').classList.add('count');   // big 3-2-1 in the middle of the screen
+   const spots: Record<string, [number, number]> = {
+     'YOU': [-4, 6], 'RICO': [7, 12], 'OLA': [0, HALF_L - 2], 'VIPER': [4, -6], 'NOX': [-7, -12], 'BRICK': [0, -HALF_L + 2],
+   };
+@@ -379,7 +380,7 @@ loop((rawDt, time) => {
+   if (active) {
+     elapsedTotal += dt;
+     // timers
+-    if (state === 'kickoff') { M.kickoffT -= dt; if (M.kickoffT <= 0) { state = 'play'; sfx.play('whistle'); voice('go'); } }
++    if (state === 'kickoff') { M.kickoffT -= dt; if (M.kickoffT <= 0) { state = 'play'; sfx.play('whistle'); voice('go'); $('sub').classList.remove('count'); banner('GO!', 0.8); } }
+     if (state === 'play' && !M.golden && M.time > 30 && M.time - dt <= 30) voice('hurry_up');
+     if (state === 'goal') { M.goalT -= rawDt; if (M.goalT <= 0) { if (M.golden) { endMatch(); input.endFrame(); return; } kickoff(M.score[0] > M.score[1] ? 1 : 0); music.setIntensity(M.time < 60 ? 2 : 1); } }
+     if (state === 'play') {

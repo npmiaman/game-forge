@@ -1,0 +1,26 @@
+diff --git a/games/blast-ball/index.html b/games/blast-ball/index.html
+index 986e1ca..6d79dcf 100644
+--- a/games/blast-ball/index.html
++++ b/games/blast-ball/index.html
+@@ -38,7 +38,7 @@
+     #banner.show { animation: ban 2.6s ease-out forwards; }
+     @keyframes ban { 0% { opacity: 0; transform: scale(2); } 12% { opacity: 1; transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+     #note { bottom: 110px; left: 0; right: 0; text-align: center; font-size: 12px; transition: opacity .5s; }
+-    #ballhint { bottom: 90px; left: 0; right: 0; text-align: center; font-size: 9px; color: #ccc; }
++    #ballhint { bottom: 92px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #ffd060; background: #000a; padding: 6px 12px; border-radius: 4px; white-space: nowrap; } #ballhint:empty { display: none; }
+     #zoneTint { inset: 0; background: radial-gradient(transparent 40%, rgba(40,120,255,.45)); opacity: 0; transition: opacity .3s; pointer-events: none; }
+     .ov { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; background: linear-gradient(#0007, #0003 50%, #000a); pointer-events: auto; cursor: pointer; padding: 16px; }
+     .ov h1 { margin: 0; font-size: clamp(36px, 8vw, 84px); color: #ff7a1a; text-shadow: 5px 5px 0 #000a; letter-spacing: 3px; }
+diff --git a/games/blast-ball/main.ts b/games/blast-ball/main.ts
+index 434bb7b..75245ae 100644
+--- a/games/blast-ball/main.ts
++++ b/games/blast-ball/main.ts
+@@ -527,7 +527,7 @@ loop((rawDt, time) => {
+     const outside = Math.abs(human.x) > M.zoneHalf && human.alive && state === 'play';
+     $('zoneTint').style.opacity = outside ? '1' : '0';
+     $('sub').textContent = outside ? '⚠ OUTSIDE THE ZONE' : state === 'kickoff' ? String(Math.ceil(M.kickoffT)) : '';
+-    $('ballhint').textContent = ball.owner === human ? 'YOU HAVE THE BALL — hold RIGHT CLICK to shoot' : '';
++    $('ballhint').textContent = ball.owner === human ? '⚽ YOUR BALL — hold RIGHT CLICK or SPACE to KICK' : '';
+     hitT -= rawDt; $('hitx').style.opacity = hitT > 0 ? '1' : '0';
+     bannerT -= rawDt; noteT -= rawDt; if (noteT <= 0) $('note').style.opacity = '0';
+     drawMap();

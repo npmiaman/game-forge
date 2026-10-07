@@ -40,6 +40,8 @@ Then open the folder in Claude Code and say what you want:
 
 Claude picks the closest template, scaffolds `games/<your-game>/`, builds it, bot-playtests it, reads the screenshots, fixes what's broken, and tells you how to play it.
 
+Then it runs a **kid check**: it plays the game the way a kid would, lists the **5 problems anyone would point out** (*"the countdown is too small"*, *"the camera goes inside my body when I die"*), and has a tested fix for each one staged as a patch. Say *"fix 2"* or *"fix all"* and it lands instantly — see [games/blast-ball/FIXES.md](games/blast-ball/FIXES.md) for an example.
+
 ## The vibe-coding loop
 
 1. **Describe it.** Any genre: shooter, platformer, puzzle, physics, racing, 3D, horror…
@@ -58,6 +60,7 @@ Each game keeps a `GAME.md` design doc that Claude reads and updates, so you can
 | `/playtest <slug>` | bot-plays the game, reads screenshots, fixes what's broken |
 | `/polish <slug>` | walks the game-feel checklist and adds missing juice |
 | `/ship <slug>` | checks, builds, and zips the game for itch.io |
+| *"fix 2"* / *"fix all"* | applies the staged kid-check fixes (`games/<slug>/FIXES.md`) |
 
 A hook type-checks after every edit Claude makes and feeds errors straight back, so broken code never piles up.
 
@@ -73,6 +76,7 @@ A hook type-checks after every edit Claude makes and feeds errors straight back,
 | `npm run check` | type-check everything (~1 s) |
 | `npm run ship -- my-game` | standalone build + `ship/my-game.zip` |
 | `npm run assets -- add castle-kit` | import any Kenney pack (also `texture` / `hdri <polyhaven-id>`) |
+| `npm run fixes -- apply my-game 2` | apply a staged kid-check fix (`undo`, `list`, `all` too) |
 | `npm run build` | the whole arcade as a static site in `dist/` |
 
 VS Code users: **Tasks: Run Task** has all of these, and **F5** debugs a game in Chrome with breakpoints.
@@ -105,8 +109,8 @@ kit/            shared game kit — every file's header comment is its docs
   assets.ts       load library models/animations/textures/skies/sounds by name
 templates/      six genre starters
 games/          your games (each: index.html, main.ts, game.json, GAME.md)
-scripts/        new-game, play, shot (headless playtest), ship, assets (importer)
-.claude/        skills (make-game, playtest, polish, ship, phaser4) + type-check hook
+scripts/        new-game, play, shot (headless playtest), fixes (staged patches), ship, assets (importer)
+.claude/        skills (make-game, kid-check, playtest, polish, ship, phaser4) + type-check hook
 AGENTS.md       instructions for any coding agent (CLAUDE.md imports it)
 ```
 
