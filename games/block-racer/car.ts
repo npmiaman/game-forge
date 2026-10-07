@@ -1,7 +1,8 @@
 /** Voxel car built from boxes. Front faces -z. */
 import * as THREE from 'three';
+import { loadModel, sizeOf } from '@kit/assets';
 
-export interface CarMesh { root: THREE.Group; body: THREE.Group; wheels: THREE.Mesh[]; shadow: THREE.Mesh; flames: THREE.Mesh[] }
+export interface CarMesh { root: THREE.Group; body: THREE.Group; wheels: THREE.Object3D[]; shadow: THREE.Mesh; flames: THREE.Mesh[] }
 
 export function makeCar(color = 0xe0392b): CarMesh {
   const root = new THREE.Group();
@@ -45,4 +46,21 @@ export function makeCar(color = 0xe0392b): CarMesh {
   shadow.position.y = 0.03;
   root.add(shadow);
   return { root, body, wheels, shadow, flames };
+}
+
+/**
+ * Swap the box car for Kenney's race car (car-kit/race). Keeps the flames + shadow; wheels become the
+ * model's own wheel nodes so the existing spin/steer code drives them.
+ */
+export async function upgradeCar(car: CarMesh, id = 'car-kit/race') {
+  const m = await loadModel(id);
+  const sz = sizeOf(m);
+  m.scale.setScalar(3.9 / sz.z);          // match the old 2×3.8 m footprint
+  m.rotation.y = Math.PI;                  // Kenney cars face +z, ours drive toward -z
+  for (const c of [...car.body.children]) if (!car.flames.includes(c as THREE.Mesh)) c.visible = false;
+  car.body.add(m);
+  const wheels = ['wheel-front-left', 'wheel-front-right', 'wheel-back-left', 'wheel-back-right'].map((n) => m.getObjectByName(n)).filter((w): w is THREE.Object3D => !!w);
+  if (wheels.length === 4) car.wheels.splice(0, car.wheels.length, ...wheels);
+  car.flames.forEach((f) => { f.position.z = 2.15; f.position.y = 0.55; });
+  return m;
 }

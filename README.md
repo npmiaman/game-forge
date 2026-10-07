@@ -11,7 +11,17 @@ Everything is set up for an AI agent to work fast: a shared game kit (juice, pro
 | ![Hollow House](docs/screenshots/hollow-house.jpg) | ![Arcade](docs/screenshots/arcade.jpg) |
 | **Hollow House** — first-person horror (3D, Three.js) | **The arcade** — every game you make shows up here |
 
-All three games were built by Claude in this repo from short prompts. No art or audio files — everything is generated in code.
+All games were built by Claude in this repo from short prompts, using the shared kit and the CC0 asset library below.
+
+## Asset library
+
+![Asset library](docs/screenshots/asset-library.jpg)
+
+**~1,700 3D models · ~1,900 sprites · ~670 sounds · 16 photoreal textures · 6 HDRI skies**, all CC0 (free for commercial use, no attribution required) — from [Kenney](https://kenney.nl) and [Poly Haven](https://polyhaven.com). Animated characters (walk, run, shoot, kick, die…), zombies and skeletons, cars, guns, furniture, nature, castles, space, food, dungeons, platformer tiles, UI, icons, footsteps, impacts, lasers, explosions, door creaks, an announcer voice, and more.
+
+- Browse it at **`/assets.html`** (link on the arcade page): search, spin models in 3D, play their animations, listen to sounds, copy names.
+- Claude reads `assets/CATALOG.md` and uses the library automatically when it builds a game.
+- Need something else? `npm run assets -- add <kenney-pack>` or `npm run assets -- texture <polyhaven-id>` pulls it in, ready to use.
 
 ## Quick start
 
@@ -62,6 +72,7 @@ A hook type-checks after every edit Claude makes and feeds errors straight back,
 | `npm run shot -- my-game --gpu` | headless bot playtest → screenshots in `.shots/` |
 | `npm run check` | type-check everything (~1 s) |
 | `npm run ship -- my-game` | standalone build + `ship/my-game.zip` |
+| `npm run assets -- add castle-kit` | import any Kenney pack (also `texture` / `hdri <polyhaven-id>`) |
 | `npm run build` | the whole arcade as a static site in `dist/` |
 
 VS Code users: **Tasks: Run Task** has all of these, and **F5** debugs a game in Chrome with breakpoints.
@@ -82,6 +93,7 @@ Every template is a complete, playtested game — menus, pause, game over, best 
 ## What's inside
 
 ```
+assets/         CC0 asset library (models, sprites, sounds, textures, skies) + CATALOG.md
 kit/            shared game kit — every file's header comment is its docs
   audio.ts        procedural SFX presets (ZzFX) + chiptune/synthwave music sequencer
   tune.ts         live tuning sliders (?tune)
@@ -90,9 +102,10 @@ kit/            shared game kit — every file's header comment is its docs
   pool.ts · spatial.ts · rng.ts · save.ts · math.ts · input.ts
   phaser/         boot, menus, pause, upgrade cards, procedural textures, juice, UI, touch
   three/          boot (renderer, bloom, shadows, HUD, shake), cube debris
+  assets.ts       load library models/animations/textures/skies/sounds by name
 templates/      six genre starters
 games/          your games (each: index.html, main.ts, game.json, GAME.md)
-scripts/        new-game, play, shot (headless playtest), ship
+scripts/        new-game, play, shot (headless playtest), ship, assets (importer)
 .claude/        skills (make-game, playtest, polish, ship, phaser4) + type-check hook
 AGENTS.md       instructions for any coding agent (CLAUDE.md imports it)
 ```
@@ -109,4 +122,4 @@ AGENTS.md       instructions for any coding agent (CLAUDE.md imports it)
 
 ## Credits & license
 
-MIT — see [LICENSE](LICENSE). Built on [Phaser](https://github.com/phaserjs/phaser) (MIT), [three.js](https://github.com/mrdoob/three.js) (MIT), [ZzFX](https://github.com/KilledByAPixel/ZzFX) (MIT), [Tweakpane](https://github.com/cocopon/tweakpane) (MIT), and the Orbitron & Press Start 2P fonts (OFL) via [Fontsource](https://fontsource.org).
+Code: MIT — see [LICENSE](LICENSE). Assets: CC0 — see [assets/LICENSES.md](assets/LICENSES.md) (Kenney, Poly Haven). Built on [Phaser](https://github.com/phaserjs/phaser) (MIT), [three.js](https://github.com/mrdoob/three.js) (MIT), [ZzFX](https://github.com/KilledByAPixel/ZzFX) (MIT), [Tweakpane](https://github.com/cocopon/tweakpane) (MIT), and the Orbitron & Press Start 2P fonts (OFL) via [Fontsource](https://fontsource.org).

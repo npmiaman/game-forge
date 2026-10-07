@@ -16,6 +16,7 @@ import { action } from '@kit/tune';
 import { PLAYER, GRANNY, ZOMBIE, RPG, NOISE, SLUG, CELL } from './config';
 import { House, toWorld, toCell, type HideSpot, type Door } from './house';
 import { Grandma, Zombie, type ActorEvents, type Senses } from './actors';
+import { sound, loadModel, sizeOf } from '@kit/assets';
 
 const q = new URLSearchParams(location.search);
 const god = q.has('god');
@@ -135,6 +136,13 @@ function play3d(name: string, x: number, z: number, vol = 1, maxDist = 22) {
   const rel = angleDiff(-P.yaw, Math.atan2(dx, -dz));
   sfx.play(name, { volume: v, pan: Math.sin(rel) * 0.8 });
 }
+/** recorded sounds from the asset library, positioned like play3d */
+function rec3d(pattern: string, x: number, z: number, vol = 1, maxDist = 22, rate = 1) {
+  const dx = x - P.x, dz = z - P.z, d = Math.hypot(dx, dz);
+  if (d > maxDist) return;
+  const v = vol * Math.pow(1 - d / maxDist, 1.6) * (house.los(P.x, P.z, x, z) ? 1 : 0.45);
+  sound.play(pattern, { volume: v, rate, pan: Math.sin(angleDiff(-P.yaw, Math.atan2(dx, -dz))) * 0.8, minGap: 0.05 });
+}
 function noise(x: number, z: number, r: number) {
   if (r <= 0) return;
   if (!q.has('nogranny')) grandma.hear(x, z, r);
@@ -142,11 +150,11 @@ function noise(x: number, z: number, r: number) {
 }
 
 const events: ActorEvents = {
-  step: (x, z, heavy) => play3d(heavy ? 'gstep' : 'step', x, z, heavy ? 1 : 0.6, heavy ? 26 : 14),
+  step: (x, z, heavy) => { if (heavy) { rec3d('impact-sounds/footstep_wood_*', x, z, 1.2, 28, 0.62); play3d('gstep', x, z, 0.5, 26); } else rec3d('impact-sounds/footstep_carpet_*', x, z, 0.7, 14, 0.8); },
   spotted: () => { sfx.play('sting'); message('SHE SEES YOU — RUN', 2.5, '#ff4040'); music.setIntensity(1); shake(0.15); },
   caught: () => { if (!god && state === 'play') startCaught('caught'); },
-  door: (x, z) => play3d('creak', x, z, 1, 20),
-  bang: (x, z) => { play3d('bang', x, z, 1, 22); noise(x, z, NOISE.zombieBang); },
+  door: (x, z) => { rec3d('rpg-audio/dooropen_*', x, z, 1, 22); rec3d('rpg-audio/creak*', x, z, 0.7, 20); },
+  bang: (x, z) => { rec3d('impact-sounds/impactwood_heavy_*', x, z, 1, 24); noise(x, z, NOISE.zombieBang); },
   attack: (dmg) => hurt(dmg),
   groan: (x, z) => play3d('groan', x, z, 0.9, 16),
 };
@@ -165,6 +173,7 @@ function spawnItems() {
     g.add(ring, shaft, tooth);
     const glow = new THREE.PointLight(keyDefs[i][1], 0.8, 2.5, 2); g.add(glow);
     addItem({ kind: 'key', color: keyDefs[i][0], hex: keyDefs[i][1] }, c, g);
+    upgradeItem(g, 'mini-dungeon/key', 0.32, keyDefs[i][1]);
   });
   for (const c of house.spots.H) {
     const g = new THREE.Group();
@@ -173,11 +182,21 @@ function spawnItems() {
     const cr2 = cr1.clone(); cr2.rotation.z = Math.PI / 2;
     g.add(b, cr1, cr2);
     addItem({ kind: 'medkit' }, c, g);
+    upgradeItem(g, 'mini-dungeon/potion', 0.4);
   }
   for (const c of house.spots.A) {
     const g = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 10), new THREE.MeshStandardMaterial({ color: 0x44aa44, emissive: 0x113311 }));
     addItem({ kind: 'battery' }, c, g);
   }
+}
+/** replace an item's placeholder meshes with a library model (keeps its glow light) */
+function upgradeItem(g: THREE.Object3D, id: string, size: number, tint?: number) {
+  loadModel(id, { height: size, tint }).then((m) => {
+    g.children.forEach((c) => { if (!(c as THREE.Light).isLight) c.visible = false; });
+    if (tint !== undefined) m.traverse((c) => { const mesh = c as THREE.Mesh; if (mesh.isMesh) (mesh.material as THREE.MeshStandardMaterial).emissive = new THREE.Color(tint).multiplyScalar(0.35); });
+    m.position.y = -size / 2;
+    g.add(m);
+  });
 }
 function addItem(base: Pick<Item, 'kind' | 'color' | 'hex'>, c: { x: number; y: number }, mesh: THREE.Object3D) {
   const w = toWorld(c);
@@ -190,6 +209,7 @@ function addItem(base: Pick<Item, 'kind' | 'color' | 'hex'>, c: { x: number; y: 
 function spawnZombie(at?: { x: number; y: number }) {
   const c = at ?? rng.pick(house.spots.S.filter((s) => { const w = toWorld(s); return Math.hypot(w.x - P.x, w.z - P.z) > 8; }).concat(house.spots.S).slice(0, 3));
   const z = new Zombie(house, events, scene, ZOMBIE.hp + (P.day - 1) * ZOMBIE.hpPerDay);
+  void z.dress();
   z.place(c);
   zombies.push(z);
 }
@@ -350,14 +370,14 @@ function interact(t: Target) {
   if (t.kind === 'unhide') {
     const s = P.hidden!; P.hidden = null;
     const w = toWorld(s.front); P.x = w.x; P.z = w.z;
-    $('hideview').className = ''; sfx.play('creak', { volume: 0.4 }); noise(P.x, P.z, 3);
+    $('hideview').className = ''; sound.play('rpg-audio/cloth*'); sound.play('rpg-audio/creak*', { volume: 0.5 }); noise(P.x, P.z, 3);
     return;
   }
   if (t.kind === 'item') {
     const it = t.item; it.taken = true; it.mesh.visible = false;
-    if (it.kind === 'key') { P.keys.add(it.color!); sfx.play('powerup'); message(`${it.color!.toUpperCase()} KEY (${P.keys.size}/3)`, 3, '#' + it.hex!.toString(16).padStart(6, '0')); if (P.keys.size === 3) setTimeout(() => message('ALL KEYS — GET TO THE FRONT DOOR (LIVING ROOM)', 4, '#7dff9a'), 1500); }
-    else if (it.kind === 'medkit') { P.hp = Math.min(perks.maxHp, P.hp + RPG.medkit); sfx.play('coin'); message(`+${RPG.medkit} HP`, 2, '#ff6666'); }
-    else { P.battery = Math.min(100, P.battery + RPG.batteryPickup); sfx.play('coin'); message('BATTERY +50%', 2, '#7dff9a'); }
+    if (it.kind === 'key') { P.keys.add(it.color!); sound.play('rpg-audio/metallatch'); sound.play('rpg-audio/handlecoins*', { volume: 0.7 }); message(`${it.color!.toUpperCase()} KEY (${P.keys.size}/3)`, 3, '#' + it.hex!.toString(16).padStart(6, '0')); if (P.keys.size === 3) setTimeout(() => message('ALL KEYS — GET TO THE FRONT DOOR (LIVING ROOM)', 4, '#7dff9a'), 1500); }
+    else if (it.kind === 'medkit') { P.hp = Math.min(perks.maxHp, P.hp + RPG.medkit); sound.play('rpg-audio/bookplace*'); sfx.play('coin', { volume: 0.4 }); message(`+${RPG.medkit} HP`, 2, '#ff6666'); }
+    else { P.battery = Math.min(100, P.battery + RPG.batteryPickup); sound.play('interface-sounds/click_*'); message('BATTERY +50%', 2, '#7dff9a'); }
     return;
   }
   if (t.kind === 'hide') {
@@ -367,18 +387,18 @@ function interact(t: Target) {
     P.hidden = t.spot;
     const w = toWorld(t.spot.cell); P.x = w.x; P.z = w.z;
     $('hideview').className = t.spot.kind;
-    sfx.play('creak', { volume: 0.4 });
+    sound.play('rpg-audio/cloth*'); sound.play('rpg-audio/creak*', { volume: 0.5 });
     message(grandma.sawHide ? 'SHE SAW YOU HIDE...' : 'Hidden. Stay quiet.', 2, grandma.sawHide ? '#ff4040' : '#aaa');
     return;
   }
   const d = t.door;
   if (d.exit) {
-    if (P.keys.size >= 3) { d.target = 1; sfx.play('creak'); sfx.play('powerup'); setTimeout(() => state === 'play' && endGame(true), 1200); }
-    else { sfx.play('denied'); const missing = ['red', 'blue', 'gold'].filter((k) => !P.keys.has(k)); message(`Locked. Missing: ${missing.join(', ')} key`, 2.5); }
+    if (P.keys.size >= 3) { d.target = 1; sound.play('rpg-audio/metallatch'); sound.play('rpg-audio/dooropen_*'); sfx.play('powerup'); setTimeout(() => state === 'play' && endGame(true), 1200); }
+    else { sound.play('rpg-audio/metalclick'); sfx.play('denied', { volume: 0.4 }); const missing = ['red', 'blue', 'gold'].filter((k) => !P.keys.has(k)); message(`Locked. Missing: ${missing.join(', ')} key`, 2.5); }
     return;
   }
   d.target = d.target > 0.5 ? 0 : 1;
-  sfx.play('creak', { volume: 0.6 }); noise(P.x, P.z, NOISE.door);
+  sound.play(d.target > 0.5 ? 'rpg-audio/dooropen_*' : 'rpg-audio/doorclose_*'); noise(P.x, P.z, NOISE.door);
 }
 
 // ---------------------------------------------------------------- combat
@@ -386,7 +406,7 @@ function swing() {
   if (P.hidden || P.swingT > 0 || P.stamina < PLAYER.swingCost) { if (P.stamina < PLAYER.swingCost) message('Too tired...', 1); return; }
   P.swingT = PLAYER.swingCooldown; P.swingAnim = 1; P.hitPending = 0.12;
   P.stamina -= PLAYER.swingCost;
-  sfx.play('swing'); noise(P.x, P.z, NOISE.swing);
+  sfx.play('swing', { volume: 0.6 }); sound.play('rpg-audio/drawknife*', { volume: 0.5, rate: 1.3 }); noise(P.x, P.z, NOISE.swing);
 }
 function resolveHit() {
   const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
@@ -399,13 +419,13 @@ function resolveHit() {
     if (killed) {
       P.kills++; P.xp += ZOMBIE.xp;
       if (perks.lifesteal) P.hp = Math.min(perks.maxHp, P.hp + perks.lifesteal);
-      sfx.play('splat'); sfx.play('thud'); message(`+${ZOMBIE.xp} XP`, 1.2, '#7dff9a'); shake(0.25);
-    } else { sfx.play('bonk'); shake(0.12); }
+      sfx.play('splat'); sound.play('impact-sounds/impactpunch_heavy_*'); message(`+${ZOMBIE.xp} XP`, 1.2, '#7dff9a'); shake(0.25);
+    } else { sound.play('impact-sounds/impactmetal_heavy_*', { volume: 0.8 }); shake(0.12); }
   }
   if (inArc(grandma.x, grandma.z) && grandma.state !== 'stunned') {
     hitAny = true;
     grandma.stun(perks.stun);
-    sfx.play('bonk', { rate: 0.7 }); sfx.play('groan', { rate: 1.6 }); shake(0.35);
+    sound.play('impact-sounds/impactbell_heavy_*'); sfx.play('groan', { rate: 1.6 }); shake(0.35);
     message(`GRANDMA STUNNED — ${perks.stun}s, GO!`, 2.5, '#ffcc33');
   }
   if (hitAny) noise(P.x, P.z, NOISE.hit);
@@ -440,7 +460,7 @@ loop((dt) => {
       P.stepT -= dt * speed;
       if (P.stepT <= 0) {
         P.stepT = 1.5;
-        sfx.play('step', { volume: P.crouch ? 0.3 : P.sprinting ? 1 : 0.6 });
+        sound.play('impact-sounds/footstep_wood_*', { volume: P.crouch ? 0.15 : P.sprinting ? 0.8 : 0.45, rate: P.crouch ? 1.1 : 1 });
         noise(P.x, P.z, (P.crouch ? NOISE.crouchStep : P.sprinting ? NOISE.sprintStep : NOISE.walkStep) * perks.stepMul);
       }
     }
@@ -469,12 +489,12 @@ loop((dt) => {
     // jump scare: her face right in yours
     if (fadeReason === 'caught') {
       camera.getWorldDirection(fwd);
-      grandma.root.position.set(camera.position.x + fwd.x * 0.75, camera.position.y - 2.0, camera.position.z + fwd.z * 0.75);
+      grandma.root.position.set(camera.position.x + fwd.x * 0.95, camera.position.y - 1.62, camera.position.z + fwd.z * 0.95);
       grandma.root.rotation.y = Math.atan2(-fwd.x, -fwd.z);
-      grandma.face.scale.setScalar(1 + caughtT * 0.6);
+      grandma.root.scale.setScalar(1 + caughtT * 0.35);
       shake(0.3);
     }
-    if (caughtT > 1.6) { $('scare').classList.remove('on'); grandma.face.scale.setScalar(1); loseDay(); }
+    if (caughtT > 1.6) { $('scare').classList.remove('on'); grandma.root.scale.setScalar(1); loseDay(); }
   } else if (state === 'fade') {
     fadeT += dt;
     if (fadeT > 2.8) { $('fade').classList.remove('on'); state = 'play'; message(`DAY ${P.day} — she's faster now`, 3, '#ff8080'); }
@@ -547,5 +567,19 @@ $('best').textContent = best ? `Best escape: ${Math.floor(best / 60)}:${String(b
 // attract: a dim hallway view behind the menu
 grandma = new Grandma(house, events, scene);
 grandma.place(house.spots.G[0]);
+// real art from the asset library: furniture + textures, Grandma's rig, the frying pan
+await Promise.all([
+  house.dress(),
+  grandma.dress(),
+  loadModel('food-kit/frying-pan').then((m) => {
+    pan.children.forEach((c) => (c.visible = false));
+    const sz = sizeOf(m); m.scale.setScalar(0.42 / Math.max(sz.x, sz.z));          // ~42cm long, whatever the source scale
+    m.traverse((c) => { const mesh = c as THREE.Mesh; if (!mesh.isMesh) return; const mat = (mesh.material as THREE.MeshStandardMaterial).clone(); mat.color.multiplyScalar(0.45); mat.metalness = 0.5; mat.roughness = 0.45; mesh.material = mat; });
+    m.rotation.set(-1.15, 0.5, 0.15);   // tilted away: you see the rim and some of the cooking surface, handle toward the fist
+    m.position.set(-0.02, 0.2, 0.02);
+    pan.add(m);
+  }),
+  sound.load('impact-sounds/footstep_wood_*', 'rpg-audio/dooropen_*', 'rpg-audio/doorclose_*', 'rpg-audio/creak*'),
+]);
 { const w = toWorld({ x: 14, y: 7 }); P.x = w.x; P.z = w.z; P.yaw = Math.PI / 2; }
 (window as any).__debug = { P, house, get grandma() { return grandma; }, get zombies() { return zombies; }, interact, findTarget, swing, startPlay, CELL };

@@ -6,6 +6,8 @@ import { Pool } from '@kit/pool';
 import { clamp, damp, TAU } from '@kit/math';
 import { rng } from '@kit/rng';
 import { playtest } from '@kit/phaser/boot';
+import { sound } from '@kit/assets';
+const voice = (line: string) => sound.play(`voiceover-pack/${line}`, { volume: 0.85, minGap: 0 });
 import { makeArt } from '../art';
 import { ARENA, BASE_STATS, C, DIRECTOR, PLAYER, type Stats, xpForLevel } from '../config';
 import { ENEMIES, UPGRADES, type Kind, type EnemyDef } from '../data';
@@ -266,7 +268,7 @@ export class Play extends Phaser.Scene {
   spawnBoss() {
     this.bossCount++;
     const R = this.run;
-    this.events.emit('banner', 'HIVE MOTHER', `wave ${R.wave} · kill it`, 0xff2255);
+    this.events.emit('banner', 'HIVE MOTHER', `wave ${R.wave} · kill it`, 0xff2255); voice('war_look_out');
     music.setIntensity(3);
     sfx.play('bigBoom', { volume: 0.6 });
     this.juice.shake(0.6, 500);
@@ -791,7 +793,7 @@ export class Play extends Phaser.Scene {
     this.juice.burst(this.px, this.py, C.player, { count: 60, speed: 600, life: 1200, scale: 1.4 });
     this.juice.burst(this.px, this.py, 0xffffff, { count: 30, speed: 300, life: 800 });
     for (let i = 0; i < 4; i++) this.time.delayedCall(i * 120, () => this.juice.ring(this.px, this.py, C.player, { radius: 150 + i * 90, ms: 700, width: 6 }));
-    sfx.play('bigBoom');
+    sfx.play('bigBoom'); voice('game_over');
     music.setIntensity(0);
     this.juice.slowmo(0.25, 1200);
     this.cameras.main.stopFollow();
@@ -812,7 +814,7 @@ export class Play extends Phaser.Scene {
       const id = rng.weighted(avail.filter((u) => !picks.includes(u.id)).map((u) => [u.id, u.weight] as const));
       picks.push(id);
     }
-    sfx.notes('blip', [0, 4, 7, 12], 0.06);
+    sfx.notes('blip', [0, 4, 7, 12], 0.06); voice('level_up');
     this.juice.ring(this.px, this.py, C.xp, { radius: 160, ms: 400, width: 6 });
     this.scene.pause();
     this.scene.launch('LevelUp', { choices: picks, level: this.run.level, owned: { ...owned } });

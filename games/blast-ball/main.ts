@@ -16,6 +16,7 @@ import { SLUG, PITCH, MATCH, ZONE, BALL, HEALTH, GLOO, AI } from './config';
 import { Stadium, HALF_L, HALF_W, TEAM_COLOR, TEAM_NAME } from './pitch';
 import { Player, Ball, aiThink, type AiWorld } from './actors';
 import { WEAPONS, LOOT_COLOR, LOOT_LABEL, Tracers, Gloo, Rocket, makeCrate, type WeaponId, type LootKind, type Loot } from './weapons';
+import { sound, loadHdri, loadModel } from '@kit/assets';
 
 const q = new URLSearchParams(location.search);
 const save = store(SLUG, { wins: 0, losses: 0, draws: 0, goals: 0, knocks: 0, best: 0 });
@@ -36,8 +37,8 @@ sfx.define('crate', { volume: 0.7, freq: 80, sustain: 0.04, release: 0.25, shape
 await document.fonts.load('16px "Press Start 2P"').catch(() => {});
 const { scene, camera, renderer, loop, hud, shake } = bootThree({ background: 0x86bfff, fog: { color: 0xa9d2ff, near: 90, far: 230 }, fov: 70, shadows: true, maxPixelRatio: 1.5 });
 camera.far = 500; camera.updateProjectionMatrix();
-scene.add(new THREE.HemisphereLight(0xddeeff, 0x3a5a30, 1.1));
-const sun = new THREE.DirectionalLight(0xfff4e0, 2.4);
+scene.add(new THREE.HemisphereLight(0xddeeff, 0x3a5a30, 0.7));
+const sun = new THREE.DirectionalLight(0xfff4e0, 2.0);
 sun.position.set(30, 60, 25); sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -50, right: 50, top: 50, bottom: -50, near: 10, far: 150 });
@@ -65,15 +66,23 @@ const crowd = (() => {
 })();
 
 // ---------------------------------------------------------------- teams
-const human = new Player(scene, 'YOU', 0, 10, 'field', true);
+const human = new Player(scene, 'YOU', 0, 10, 'field', true, 'character-male-b');
 const players = [
   human,
-  new Player(scene, 'RICO', 0, 7, 'field'),
-  new Player(scene, 'OLA', 0, 1, 'keeper'),
-  new Player(scene, 'VIPER', 1, 9, 'field'),
-  new Player(scene, 'NOX', 1, 11, 'field'),
-  new Player(scene, 'BRICK', 1, 1, 'keeper'),
+  new Player(scene, 'RICO', 0, 7, 'field', false, 'character-male-e'),
+  new Player(scene, 'OLA', 0, 1, 'keeper', false, 'character-female-d'),
+  new Player(scene, 'VIPER', 1, 9, 'field', false, 'character-male-c'),
+  new Player(scene, 'NOX', 1, 11, 'field', false, 'character-female-b'),
+  new Player(scene, 'BRICK', 1, 1, 'keeper', false, 'character-male-a'),
 ];
+// real lighting from a stadium HDRI + grass detail on the pitch; load everything before the first frame
+await Promise.all([
+  ...players.map((p) => p.ready),
+  loadHdri(scene, 'stadium_01', { intensity: 0.3 }),
+  stadium.addGrassDetail(),
+  sound.load('impact-sounds/impactsoft_heavy_*', 'sci-fi-sounds/lasersmall_*', 'digital-audio/laser*', 'impact-sounds/impactpunch_medium_*'),
+]);
+const voice = (line: string) => sound.play(`voiceover-pack/${line}`, { volume: 0.9, minGap: 0 });
 let glooWalls: Gloo[] = [];
 let rockets: Rocket[] = [];
 let loot: Loot[] = [];
@@ -144,6 +153,7 @@ function kickoff(teamWithBall: number) {
   if (teamWithBall === 0) cam.yaw = 0;
   glooWalls.forEach((w) => scene.remove(w.mesh)); glooWalls = [];
   banner(M.golden ? 'GOLDEN GOAL<br><small>next goal wins</small>' : `<small>${TEAM_NAME[teamWithBall]} KICK OFF</small>`, MATCH.kickoffDelay);
+  voice(M.golden ? 'final_round' : 'ready');
 }
 
 function startMatch() {
@@ -174,6 +184,7 @@ function endMatch() {
   $('endScore').innerHTML = `<span style="color:${hex(TEAM_COLOR[0])}">${a}</span> – <span style="color:${hex(TEAM_COLOR[1])}">${b}</span>`;
   $('endStats').innerHTML = `Your goals ${human.goals} · knocks ${human.knocks} · knocked ${human.deaths}×<br>Record: ${save.get('wins')}W ${save.get('draws')}D ${save.get('losses')}L`;
   $('end').classList.remove('hidden');
+  setTimeout(() => voice(res === 'win' ? 'you_win' : res === 'loss' ? 'you_lose' : 'its_a_tie'), 900);
   sfx.play('whistle'); setTimeout(() => sfx.play('whistle'), 350); setTimeout(() => sfx.play('whistle', { rate: 0.8 }), 700);
   crowd.set(res === 'win' ? 0.3 : 0.1);
   showRecord();
@@ -212,22 +223,24 @@ function knock(victim: Player, by: Player | null, weapon: string, head: boolean)
   victim.special = null; victim.weapon = 'pistol';
   if (ball.owner === victim) { ball.owner = null; ball.vel.set((Math.random() - 0.5) * 4, 3, (Math.random() - 0.5) * 4); }
   if (by === human) { sfx.play('coin'); note(`KNOCKED ${victim.name}${head ? ' — HEADSHOT' : ''}`, 1.6, '#ffd060'); }
-  if (victim === human) { sfx.play('hurt'); shake(0.4); note(`KNOCKED BY ${by?.name ?? 'THE ZONE'} — back in ${MATCH.respawn}s`, MATCH.respawn, '#ff6060'); }
+  if (victim === human) { sound.play('impact-sounds/impactpunch_heavy_*'); shake(0.4); note(`KNOCKED BY ${by?.name ?? 'THE ZONE'} — back in ${MATCH.respawn}s`, MATCH.respawn, '#ff6060'); }
   M.excite = Math.max(M.excite, 0.3);
 }
 
 function shoot(p: Player, tx: number, ty: number, tz: number) {
   if (!p.alive || p.fireT > 0 || (state !== 'play' && state !== 'menu')) return;
   const w = WEAPONS[p.weapon];
+  p.shootT = 0.6;
   p.fireT = 1 / (w.rate * (p.human && !q.has('auto') ? 1 : AI.fireRateMul));
   const o = new THREE.Vector3(); p.muzzle.getWorldPosition(o);
   const base = new THREE.Vector3(tx - o.x, ty - o.y, tz - o.z).normalize();
   const vol = state === 'menu' ? 0.08 : p === human ? 1 : 0.4 * clamp(1 - Math.hypot(p.x - human.x, p.z - human.z) / 50, 0, 1);
   if (p.weapon === 'rocket') {
     rockets.push(new Rocket(scene, o.clone(), base.clone().multiplyScalar(34), p, p.team));
-    sfx.play('rocketfire', { volume: vol });
+    sound.play('sci-fi-sounds/laserlarge_*', { volume: vol });
   } else {
-    sfx.play(p.weapon === 'shotgun' ? 'shotgun' : p.weapon === 'smg' ? 'smg' : 'pistol', { volume: vol });
+    if (p.weapon === 'shotgun') { sfx.play('shotgun', { volume: vol * 0.6 }); sound.play('sci-fi-sounds/laserretro_*', { volume: vol, rate: 0.7 }); }
+    else sound.play(p.weapon === 'smg' ? 'digital-audio/laser*' : 'sci-fi-sounds/lasersmall_*', { volume: vol * (p.weapon === 'smg' ? 0.5 : 0.8), minGap: 0.02 });
     for (let i = 0; i < w.pellets; i++) {
       const d = base.clone().add(new THREE.Vector3((Math.random() - 0.5) * 2 * w.spread, (Math.random() - 0.5) * 2 * w.spread, (Math.random() - 0.5) * 2 * w.spread)).normalize();
       const h = rayHit(o, d, w.range, p);
@@ -238,10 +251,10 @@ function shoot(p: Player, tx: number, ty: number, tz: number) {
         const dmg = Math.round(w.damage * (h.head ? 1.6 : 1) * (aiShooter ? AI.damageMul : 1) * (q.has('god') && h.player === human ? 0 : 1));
         const knocked = h.player.damage(dmg, p);
         if (p === human) { hitT = 0.15; $('hitx').style.color = h.head ? '#ff4040' : '#fff'; sfx.play('hitmark', { freq: h.head ? 2600 : 1900 }); damageNumber(end.x, end.y + 0.3, end.z, String(dmg), h.head ? '#ff5050' : '#fff'); }
-        if (h.player === human) { shake(0.12); }
+        if (h.player === human) { shake(0.12); sound.play('impact-sounds/impactpunch_medium_*', { volume: 0.6 }); }
         debris.burst(end.x, end.y, end.z, [0xff3030], 3, 2, 1, 0.06);
         if (knocked) knock(h.player, p, w.name, !!h.head);
-      } else if (h.gloo) { h.gloo.hp -= w.damage; debris.burst(end.x, end.y, end.z, [0xbff4ff], 3, 2, 2, 0.08); }
+      } else if (h.gloo) { h.gloo.hp -= w.damage; if (p === human) sound.play('impact-sounds/impactglass_light_*', { volume: 0.4 }); debris.burst(end.x, end.y, end.z, [0xbff4ff], 3, 2, 2, 0.08); }
       else debris.burst(end.x, Math.max(0.05, end.y), end.z, [0x8a7a5a], 2, 1.5, 2, 0.05);
     }
   }
@@ -249,7 +262,7 @@ function shoot(p: Player, tx: number, ty: number, tz: number) {
 }
 
 function explode(pos: THREE.Vector3, owner: Player | null, team: number) {
-  sfx.play('bigBoom', { volume: clamp(1.2 - pos.distanceTo(camera.position) / 60, 0.15, 1) });
+  sound.play('sci-fi-sounds/explosioncrunch_*', { volume: clamp(1.2 - pos.distanceTo(camera.position) / 60, 0.15, 1) });
   shake(clamp(1 - pos.distanceTo(camera.position) / 30, 0.1, 0.8));
   debris.burst(pos.x, pos.y + 0.3, pos.z, [0xff7a20, 0xffd040, 0x444444], 40, 9, 9, 0.22);
   for (const p of players) {
@@ -271,7 +284,7 @@ function kickBall(p: Player, dx: number, dz: number, power: number, lift: number
   const near = Math.hypot(ball.pos.x - p.x, ball.pos.z - p.z) < BALL.controlRange * 1.7 && ball.pos.y < 1.6;
   if (ball.owner !== p && !near) return;
   ball.kick(p, dx, dz, power, lift);
-  sfx.play('kick', { volume: clamp(power / BALL.kickMax, 0.3, 1) * (p === human ? 1 : 0.6) });
+  sound.play('impact-sounds/impactsoft_heavy_*', { volume: clamp(power / BALL.kickMax, 0.35, 1) * (p === human ? 1 : 0.6), rate: 1.1, minGap: 0 });
   if (Math.abs(ball.pos.z - p.enemyGoal) < 30) M.excite = Math.max(M.excite, 0.35);
 }
 
@@ -281,7 +294,7 @@ function throwGloo(p: Player) {
   const w = new Gloo(scene, p.x + p.fwdX * 2.4, p.z + p.fwdZ * 2.4, p.yaw, p.team);
   glooWalls.push(w);
   if (glooWalls.filter((g) => g.alive).length > GLOO.max) glooWalls.find((g) => g.alive)!.hp = 0;
-  sfx.play('gloo', { volume: p === human ? 1 : 0.5 });
+  sfx.play('gloo', { volume: p === human ? 0.6 : 0.3 }); sound.play('impact-sounds/impactglass_heavy_*', { volume: p === human ? 0.8 : 0.4 });
 }
 
 // ---------------------------------------------------------------- loot
@@ -291,6 +304,8 @@ function spawnLoot(kind: LootKind, x: number, z: number, airdrop: boolean) {
   g.position.set(x, y, z); scene.add(g);
   const l: Loot = { kind, x, z, y, vy: airdrop ? -5 : 0, mesh: g, chute, airdrop, t: 0, alive: true, contents: airdrop ? [rng.pick(['rocket', 'smg', 'shotgun'] as LootKind[]), 'armor', 'gloo'] : undefined };
   loot.push(l);
+  // swap the placeholder box for a real crate model (keeps the coloured band + light beam)
+  loadModel(`blaster-kit/${airdrop ? 'crate-wide' : 'crate-medium'}`, { height: airdrop ? 1.1 : 0.7 }).then((m) => { const box = g.children[0]; if (box) box.visible = false; g.add(m); });
   return l;
 }
 function pickup(p: Player, l: Loot) {
@@ -302,7 +317,7 @@ function pickup(p: Player, l: Loot) {
     else if (k === 'gloo') p.gloo = Math.min(GLOO.max, p.gloo + 2);
     else p.equip(k as WeaponId);
   }
-  if (p === human) { sfx.play(l.airdrop ? 'powerup' : 'coin'); note(l.airdrop ? `AIRDROP: ${kinds.map((k) => LOOT_LABEL[k]).join(' + ')}` : LOOT_LABEL[l.kind], 2, hex(LOOT_COLOR[kinds[0]])); }
+  if (p === human) { sound.play(l.airdrop ? 'digital-audio/powerup*' : 'interface-sounds/confirmation_00*', { volume: 0.8 }); if (l.airdrop) voice('power_up'); note(l.airdrop ? `AIRDROP: ${kinds.map((k) => LOOT_LABEL[k]).join(' + ')}` : LOOT_LABEL[l.kind], 2, hex(LOOT_COLOR[kinds[0]])); }
   else if (l.airdrop) feed(`${tagName(p)} grabbed the <span class="w">AIRDROP</span>`);
 }
 
@@ -364,13 +379,14 @@ loop((rawDt, time) => {
   if (active) {
     elapsedTotal += dt;
     // timers
-    if (state === 'kickoff') { M.kickoffT -= dt; if (M.kickoffT <= 0) { state = 'play'; sfx.play('whistle'); } }
+    if (state === 'kickoff') { M.kickoffT -= dt; if (M.kickoffT <= 0) { state = 'play'; sfx.play('whistle'); voice('go'); } }
+    if (state === 'play' && !M.golden && M.time > 30 && M.time - dt <= 30) voice('hurry_up');
     if (state === 'goal') { M.goalT -= rawDt; if (M.goalT <= 0) { if (M.golden) { endMatch(); input.endFrame(); return; } kickoff(M.score[0] > M.score[1] ? 1 : 0); music.setIntensity(M.time < 60 ? 2 : 1); } }
     if (state === 'play') {
       if (!M.golden) M.time -= dt;
       if (M.time <= 0 && !M.golden) {
         M.time = 0;
-        if (M.score[0] === M.score[1]) { M.golden = true; sfx.play('whistle'); banner('GOLDEN GOAL<br><small>next goal wins</small>', 2.5); music.setIntensity(3); }
+        if (M.score[0] === M.score[1]) { M.golden = true; sfx.play('whistle'); voice('time_over'); banner('GOLDEN GOAL<br><small>next goal wins</small>', 2.5); music.setIntensity(3); }
         else { endMatch(); input.endFrame(); return; }
       }
       // loot + airdrops
@@ -464,7 +480,7 @@ loop((rawDt, time) => {
     for (const l of loot) if (l.alive && l.y > 0) {
       l.y = Math.max(0, l.y + l.vy * dt); l.mesh.position.y = l.y;
       if (l.chute) l.chute.rotation.y += dt * 0.5;
-      if (l.y === 0) { sfx.play('crate', { volume: 0.8 }); debris.burst(l.x, 0.3, l.z, [0xff4a2a, 0xaaaaaa], 30, 4, 6, 0.2); if (l.chute) l.chute.visible = false; }
+      if (l.y === 0) { sound.play('impact-sounds/impactwood_heavy_*', { volume: 0.9 }); debris.burst(l.x, 0.3, l.z, [0xff4a2a, 0xaaaaaa], 30, 4, 6, 0.2); if (l.chute) l.chute.visible = false; }
     }
     for (const l of loot) if (l.alive && l.y === 0) { l.t += dt; l.mesh.rotation.y = l.t * 0.8; }
   }
@@ -480,7 +496,7 @@ loop((rawDt, time) => {
   } else {
     const followYaw = q.has('auto') ? human.yaw : cam.yaw;
     if (q.has('auto')) cam.yaw = followYaw;
-    const back = 4.6, side = 0.85, up = 2.3;
+    const back = 5.6, side = 1.35, up = 2.7;
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
     const px = human.x - fx * back * cp + rx * side, pz = human.z - fz * back * cp + rz * side, py = up - sp * back;

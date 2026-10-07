@@ -12,7 +12,8 @@ import { action } from '@kit/tune';
 import { CAR, DRIFT, RACE, TRACK, PHYS, CAM, SLUG } from './config';
 import { makeBlocks, BLOCK_COLOR } from './blocks';
 import { World, xc, trackAngle, biomeAt, BIOMES, checkpointIndex, type Obstacle } from './world';
-import { makeCar } from './car';
+import { makeCar, upgradeCar } from './car';
+import { sound } from '@kit/assets';
 import { Debris, EngineSound } from './fx';
 
 const q = new URLSearchParams(location.search);
@@ -28,6 +29,8 @@ const world = new World(B, scene);
 const debris = new Debris(scene);
 const car = makeCar();
 scene.add(car.root);
+await upgradeCar(car);
+const voice = (line: string) => sound.play(`voiceover-pack/${line}`, { volume: 0.9, minGap: 0 });
 const hemi = new THREE.HemisphereLight(0xffffff, 0x445533, 1.3);
 const sun = new THREE.DirectionalLight(0xffffff, 1.5);
 sun.position.set(30, 60, 20);
@@ -97,7 +100,7 @@ function start() {
   engine ??= new EngineSound(audio.ctx, audio.output);
   if (!music.playing) music.play(SONGS.chiptune);
   music.setIntensity(1);
-  sfx.play('select');
+  sfx.play('select'); voice('go');
   banner('GO!', biomeAt(C.t).name, '#5dffa0');
 }
 
@@ -107,7 +110,7 @@ function gameOver() {
   const dist = Math.floor(C.t), score = dist + R.bonus;
   save.set('runs', save.get('runs') + 1);
   const nb = save.best('best', score); save.best('bestDist', dist);
-  sfx.play('bigBoom', { volume: 0.4 }); music.setIntensity(0);
+  sfx.play('bigBoom', { volume: 0.4 }); music.setIntensity(0); voice('time_over');
   $('overTitle').textContent = 'TIME UP!';
   $('final').innerHTML = `SCORE ${score.toLocaleString()}<br><small>${dist}m · ${R.coins} COINS · ${R.smashes} SMASHED · CHECKPOINT ${R.cp}</small>`;
   $('finalBest').textContent = nb ? '★ NEW BEST! ★' : `BEST ${save.get('best').toLocaleString()}`;
@@ -281,14 +284,14 @@ function collide() {
     } else if (o.kind === 'crate') {
       smash(o, [BLOCK_COLOR.planks, 0x6e5632, 0xc9a66b], 22);
       C.speed *= RACE.crateKeep; R.smashes++; R.bonus += 50;
-      sfx.play('hit'); sfx.play('explode', { volume: 0.35 }); shake(0.18);
+      sound.play('impact-sounds/impactwood_heavy_*'); sfx.play('explode', { volume: 0.25 }); shake(0.18);
       popup('SMASH +50', '#c9a66b');
     } else if (o.kind === 'tnt') {
       smash(o, [0xc83228, 0xffffff, 0x333333, 0xffa030], 40);
       for (const n of world.near(o.t, 7)) if (n.alive && (n.kind === 'crate' || n.kind === 'stone' || n.kind === 'tnt') && Math.hypot(n.x - o.x, n.t - o.t) < 6) { smash(n, [BLOCK_COLOR[n.kind === 'stone' ? 'cobble' : 'planks']], 14); R.bonus += 30; }
       C.grounded = false; C.ramp = null; C.vy = 13; C.air = 0; C.y = Math.max(C.y, 0.1);
       boost(1.0, 2);
-      sfx.play('bigBoom'); shake(0.9); flash('rgba(255,160,60,.45)');
+      sound.play('sci-fi-sounds/explosioncrunch_*'); sfx.play('bigBoom', { volume: 0.5 }); shake(0.9); flash('rgba(255,160,60,.45)');
       R.bonus += 150; popup('KABOOM +150', '#ffa030', true);
     } else if (o.kind === 'stone') {
       if (C.boostT > 0 && C.boostLv >= 2) {
@@ -299,7 +302,7 @@ function collide() {
         C.speed *= RACE.crashKeep; C.invuln = 0.5;
         C.t = Math.min(C.t, o.t - o.hd - r - 1.2);
         C.drifting = false; C.charge = 0; C.boostT = 0;
-        sfx.play('hurt'); sfx.play('thud'); shake(1); flash('rgba(255,40,40,.4)');
+        sound.play('impact-sounds/impactmetal_heavy_*'); sound.play('impact-sounds/impactplate_heavy_*', { volume: 0.7 }); shake(1); flash('rgba(255,40,40,.4)');
         debris.burst(C.x, 1, -C.t - 1, [BLOCK_COLOR.cobble, 0xe0392b], 16, 6, 6, 0.25);
         music.duck(0.3, 400);
         popup('CRASH!', '#ff4d4d', true);
@@ -317,7 +320,7 @@ function collide() {
     R.time += bonus; R.bonus += 500;
     const b = biomeAt(C.t);
     banner(`+${bonus}s`, `CHECKPOINT ${g.index} · ${b.name}`, '#5dffa0');
-    sfx.notes('select', [0, 4, 7, 12], 0.08);
+    sfx.notes('select', [0, 4, 7, 12], 0.08); voice('objective_achieved');
     music.setIntensity(Math.min(3, 1 + g.index));
     debris.burst(C.x, 4, -C.t, [0xf0c070, 0xffe14d, 0x5dffa0, 0xffffff], 50, 10, 10, 0.3);
   }

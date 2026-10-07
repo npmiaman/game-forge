@@ -19,13 +19,25 @@ A browser-game workshop: shared kit + genre templates + headless playtesting, so
 - `kit/` — engine-agnostic: `audio` (sfx presets, music sequencer, `audio.output` bus), `tune` (live sliders on `?tune`), `director` (waves/spawn budget), `upgrades` (pick-1-of-N), `grid` (A*, flood fill, ASCII), `fsm`, `pool`, `spatial`, `math`, `rng`, `save`, `input` (Three/canvas).
 - `kit/phaser/` — `boot` (`bootPhaser`, `playtest()`), `menus` (`menuScene`, `gameOverScene`), `scenes` (`go`, `enablePause`), `cards` (`chooseCard`), `textures` (procedural art), `juice`, `ui`, `level` (`buildLevel`), `touch` (`TouchPad`).
 - `kit/three/` — `boot` (`bootThree`: renderer, bloom, shadows, resize, loop, HTML HUD, shake), `debris` (instanced cube particles).
+- `kit/assets.ts` — the asset library loader (models + animations, PBR textures, HDRI, recorded sounds, URLs). Works in dev, builds and itch.io zips.
 - Each kit file's header comment is its usage doc. Read it before using the module.
 - `templates/` — `blank`, `topdown`, `platformer`, `puzzle`, `physics`, `3d`. Each is a complete, playtested game; `npm run new` with no args describes them.
 - Reference games: `games/neon-swarm` (polished 2D: pools + spatial hash, waves, upgrades, overlay scenes), `games/block-racer` (3D voxel racing: chunked InstancedMesh world, texture atlas, arcade drift physics), `games/hollow-house` (first-person horror: pointer lock, grid A* AI with hearing/sight, hiding, spatial audio).
 
+## Asset library (`assets/`, all CC0)
+
+~1,700 3D models, ~1,900 sprites, ~670 sounds, 16 PBR textures, 6 HDRI skies — Kenney packs + Poly Haven.
+- **Find things:** `assets/CATALOG.md` (every name, grouped by pack; animated rigs list their clips), or `/assets.html` in the dev server (thumbnails, 3D preview with animations, sound playback, copy-to-clipboard ids).
+- **Use them by default for anything representational** — characters, props, vehicles, furniture, weapons, environments, footsteps, impacts, UI clicks, announcer lines. Procedural art (`kit/phaser/textures.ts`, ZzFX) is for abstract/neon styles and effects.
+- **Load with `kit/assets.ts`:** `loadModel('car-kit/race', { height })`, `animate(model).play('walk')`, `loadTexture('wood_floor_worn', { repeat })`, `loadHdri(scene, 'stadium_01')`, `sound.play('impact-sounds/footstep_wood_*')` (`*` = random variant), `assetUrl('sprites/…')` for Phaser `load.spritesheet` (in a `preload`, e.g. `menuScene({ preload })`).
+- **Add more:** `npm run assets -- add <kenney-slug>` (any pack on kenney.nl/assets), `npm run assets -- texture|hdri <polyhaven-id>`. Catalog regenerates automatically.
+- Refer to assets with **string literals** (`'pack/name'`, or a template prefix like `` `voiceover-pack/${line}` ``) — `npm run ship` copies only assets it can find referenced in the game's source.
+- Kenney GLB models face **+z** (rotate π if your forward is −z). The mini-characters / graveyard characters share one rig: `idle walk sprint jump die crouch attack-melee-right attack-kick-right holding-both holding-both-shoot …`. Attach props (guns, tools) in the character root's space at hand height rather than to the arm bone — the bone's axes swing with each clip.
+- Pixel tilesheets: `pixel-platformer` tiles are 18px (20 per row), characters 24px; draw at an integer scale (2×) with `pixelArt: true`. See `templates/platformer/art.ts`.
+
 ## Commands
 
-`npm run new` (list) · `npm run new -- <slug> --template <t>` / `--from <game>` · `npm run play -- <slug> [query]` · `npm run shot -- <slug>` · `npm run check` · `npm run ship -- <slug>` (itch.io zip) · `npm run build` (whole arcade)
+`npm run new` (list) · `npm run new -- <slug> --template <t>` / `--from <game>` · `npm run play -- <slug> [query]` · `npm run shot -- <slug>` · `npm run check` · `npm run assets -- …` · `npm run ship -- <slug>` (itch.io zip, only the assets it uses) · `npm run build` (whole arcade + library)
 
 ## Playtesting
 

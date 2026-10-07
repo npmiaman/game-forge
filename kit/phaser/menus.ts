@@ -23,8 +23,10 @@ export interface MenuOpts {
   color?: string; font?: string; music?: Song;
   bestKey?: string; formatBest?: (best: number) => string;
   background?: (scene: Phaser.Scene) => void;
-  /** called once in create (generate textures here so every scene has them) */
+  /** called once in create (generate textures / animations here so every scene has them) */
   setup?: (scene: Phaser.Scene) => void;
+  /** Phaser preload: load library sprites, e.g. scene.load.spritesheet('tiles', assetUrl('sprites/…'), { frameWidth: 18, frameHeight: 18 }) */
+  preload?: (scene: Phaser.Scene) => void;
 }
 
 const best = (key: string) => store(key, { best: 0, runs: 0 });
@@ -32,6 +34,7 @@ const best = (key: string) => store(key, { best: 0, runs: 0 });
 export function menuScene(o: MenuOpts) {
   return class Menu extends Phaser.Scene {
     constructor() { super(o.key ?? 'Menu'); }
+    preload() { o.preload?.(this); }
     create() {
       o.setup?.(this);
       const { width: W, height: H } = this.scale;
@@ -40,7 +43,7 @@ export function menuScene(o: MenuOpts) {
       const pixel = font === FONTS.pixel;
       const title = text(this, W / 2, H * 0.28, o.title, { size: pixel ? Math.min(44, W / o.title.length) : Math.min(88, (W * 1.3) / o.title.length), color, font, shadow: !pixel, stroke: pixel ? '#000' : undefined, strokeWidth: pixel ? 8 : 0 });
       this.tweens.add({ targets: title, scale: 1.04, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.InOut' });
-      if (o.tagline) text(this, W / 2, H * 0.28 + (pixel ? 50 : 70), o.tagline.toUpperCase(), { size: pixel ? 10 : 16, color: '#b9a8ff', font });
+      if (o.tagline) text(this, W / 2, H * 0.28 + (pixel ? 50 : 70), o.tagline.toUpperCase(), { size: pixel ? 10 : 16, color: pixel ? '#ffffff' : '#b9a8ff', font, stroke: '#000000', strokeWidth: pixel ? 4 : 0 });
 
       const start = () => {
         sfx.play('select');
@@ -49,7 +52,7 @@ export function menuScene(o: MenuOpts) {
       };
       const b = button(this, W / 2, H * 0.62, pixel ? 'START' : 'PLAY', start, { size: pixel ? 18 : 30, font });
       this.tweens.add({ targets: b, alpha: 0.7, duration: 700, yoyo: true, repeat: -1 });
-      if (o.controls) text(this, W / 2, H * 0.78, o.controls, { size: pixel ? 9 : 14, color: '#aab4ff', font, wrap: W - 80 });
+      if (o.controls) text(this, W / 2, H * 0.78, o.controls, { size: pixel ? 9 : 14, color: pixel ? '#ffffff' : '#aab4ff', font, wrap: W - 80, stroke: '#000000', strokeWidth: pixel ? 4 : 0 });
       if (o.bestKey) {
         const s = best(o.bestKey);
         if (s.get('best')) text(this, W / 2, H * 0.88, o.formatBest ? o.formatBest(s.get('best')) : `BEST ${s.get('best').toLocaleString()}`, { size: pixel ? 9 : 13, color: '#ffe14d', font });

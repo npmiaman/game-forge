@@ -7,7 +7,7 @@ import { enablePause } from '@kit/phaser/scenes';
 import { buildLevel } from '@kit/phaser/level';
 import { TouchPad } from '@kit/phaser/touch';
 import { tune } from '@kit/tune';
-import { makeArt } from '../art';
+import { makeArt, SCALE, FRAME, CHAR } from '../art';
 import { LEVEL, PLAYER, TILE, H } from '../config';
 
 tune(PLAYER, 'Player');
@@ -25,7 +25,7 @@ export class Play extends Phaser.Scene {
   coins!: Phaser.Physics.Arcade.StaticGroup;
   hazards!: Phaser.Physics.Arcade.StaticGroup;
   enemies!: Phaser.Physics.Arcade.Group;
-  flag!: Phaser.Types.Physics.Arcade.ImageWithStaticBody;
+  flag!: Phaser.Types.Physics.Arcade.SpriteWithStaticBody;
   keys!: Record<string, Phaser.Input.Keyboard.Key>;
   hud!: Phaser.GameObjects.Text;
   dust!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -46,7 +46,7 @@ export class Play extends Phaser.Scene {
     // parallax hills
     for (let i = 0; i < 2; i++) {
       const g = this.add.graphics().setScrollFactor(0.2 + i * 0.25);
-      g.fillStyle(i ? 0x2a1f4f : 0x221a42, 1);
+      g.fillStyle(i ? 0x6fbf5e : 0x8fd27a, 1);
       for (let x = -200; x < worldW; x += 260 - i * 60) g.fillCircle(x, H - 40 + i * 30, 160 - i * 40);
     }
 
@@ -56,16 +56,16 @@ export class Play extends Phaser.Scene {
     this.enemies = this.physics.add.group();
 
     buildLevel(LEVEL, TILE, {
-      '#': (x, y, tx, ty, g) => this.solids.create(x, y, g.get(tx, ty - 1) === '#' ? 'ground' : 'ground-top'),
-      'c': (x, y) => { this.coins.create(x, y, 'coin').play('coin-spin').setCircle(10, 6, 6); this.totalCoins++; },
-      '^': (x, y) => this.hazards.create(x, y, 'spike').setSize(TILE - 8, TILE / 2).setOffset(4, TILE / 2),
-      'E': (x, y) => this.enemies.create(x, y, 'slime').play('slime-move').setVelocityX(-70).setBounceX(1).setSize(26, 20).setOffset(3, 12),
+      '#': (x, y, tx, ty, g) => this.solids.create(x, y, 'tiles', g.get(tx, ty - 1) === '#' ? FRAME.dirt : FRAME.grassTop).setScale(SCALE).refreshBody(),
+      'c': (x, y) => { this.coins.create(x, y, 'tiles', FRAME.coin).setScale(SCALE).refreshBody().play('coin-spin'); this.totalCoins++; },
+      '^': (x, y) => this.hazards.create(x, y, 'tiles', FRAME.spikes).setScale(SCALE).refreshBody().setSize(TILE - 10, TILE / 2, false).setOffset(5, TILE / 2),
+      'E': (x, y) => this.enemies.create(x, y, 'chars', CHAR.enemyA).setScale(SCALE).play('slime-move').setVelocityX(-70).setBounceX(1).setSize(16, 12).setOffset(4, 12),
       'P': (x, y) => (this.spawn = { x, y }),
-      'F': (x, y) => (this.flag = this.physics.add.staticImage(x, y, 'flag')),
+      'F': (x, y) => { this.flag = this.physics.add.staticSprite(x, y - TILE / 2, 'tiles', FRAME.flag).setScale(SCALE).refreshBody(); this.flag.play('flag-wave'); },
     });
 
-    this.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, 'hero', 0);
-    this.player.body.setSize(20, 28).setOffset(6, 4);
+    this.player = this.physics.add.sprite(this.spawn.x, this.spawn.y, 'chars', CHAR.heroIdle).setScale(SCALE);
+    this.player.body.setSize(14, 18).setOffset(5, 6);
     this.player.body.setMaxVelocityY(PLAYER.maxFall);
     this.player.setCollideWorldBounds(true);
     this.physics.world.setBounds(0, 0, worldW, worldH + 200);
@@ -134,9 +134,9 @@ export class Play extends Phaser.Scene {
     this.wasGrounded = grounded;
 
     // animation
-    if (!grounded) p.anims.stop(), p.setFrame(3);
+    if (!grounded) p.anims.stop(), p.setFrame(CHAR.heroStep);
     else if (Math.abs(body.velocity.x) > 20) p.anims.play('hero-run', true);
-    else p.anims.stop(), p.setFrame(0);
+    else p.anims.stop(), p.setFrame(CHAR.heroIdle);
 
     // slimes turn around at walls
     for (const o of this.enemies.getChildren()) {

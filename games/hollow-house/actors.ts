@@ -4,6 +4,15 @@ import { angleDiff, damp } from '@kit/math';
 import type { P } from '@kit/grid';
 import { House, toCell, toWorld } from './house';
 import { GRANNY, ZOMBIE, CELL } from './config';
+import { loadModel, animate } from '@kit/assets';
+
+type Anim = ReturnType<typeof animate>;
+/** clone every material on a model so per-actor tint/flash doesn't leak to other actors */
+function ownMaterials(m: THREE.Object3D, tint?: number, amount = 0.3) {
+  const mats: THREE.MeshStandardMaterial[] = [];
+  m.traverse((c) => { const mesh = c as THREE.Mesh; if (!mesh.isMesh) return; const mat = (mesh.material as THREE.MeshStandardMaterial).clone(); if (tint !== undefined) mat.color.lerp(new THREE.Color(tint), amount); mesh.material = mat; mats.push(mat); });
+  return mats;
+}
 
 export interface Senses { px: number; pz: number; hiding: boolean; flashlight: boolean; crouching: boolean }
 export interface ActorEvents {
@@ -71,6 +80,32 @@ export class Grandma extends Walker {
   speedMul = 1;
   private legs: THREE.Mesh[] = []; private arms: THREE.Group[] = []; private body: THREE.Group; private eyes: THREE.Mesh[] = [];
   face: THREE.Group;
+  private rig: Anim | null = null; private shovel: THREE.Object3D | null = null; private stunnedAnim = false;
+  private headMat: THREE.MeshStandardMaterial | null = null; private eyeLight: THREE.PointLight | null = null;
+
+  /** swap the placeholder box-granny for a real rigged character (grey bun, pale), with a shovel and glowing eyes */
+  async dress() {
+    const m = await loadModel('mini-characters/character-female-c', { height: 2.15 });
+    ownMaterials(m, 0xd8d0c8, 0.3);
+    this.root.add(m);
+    this.body.visible = false;
+    this.rig = animate(m); this.rig.play('idle');
+    this.shovel = await loadModel('survival-kit/tool-shovel', { height: 1.4 });
+    this.root.add(this.shovel);
+    // eyes live on a "face" group at head height so the jump scare can find them
+    // put the glowing eyes on the actual face: front of the head mesh, a bit below its centre
+    this.root.updateMatrixWorld(true);
+    const head = m.getObjectByName('head-mesh') ?? m.getObjectByName('head') ?? m;
+    const hb = new THREE.Box3().setFromObject(head);
+    const hc = hb.getCenter(new THREE.Vector3()); this.root.worldToLocal(hc);
+    const front = this.root.worldToLocal(hb.max.clone()).z;
+    this.face = new THREE.Group(); this.face.position.set(hc.x, hc.y + 0.15, front + 0.05); this.root.add(this.face);
+    this.eyes = [];
+    // her face glows red when she's hunting you (see update) — readable from any angle and pose
+    const hm = (head as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (hm?.emissive) this.headMat = hm;
+    this.eyeLight = new THREE.PointLight(0xff2020, 0.8, 4, 2); this.eyeLight.position.set(0, 0, 0.3); this.face.add(this.eyeLight);
+  }
 
   constructor(house: House, ev: ActorEvents, scene: THREE.Scene) {
     super(house, ev, 0.38);
@@ -185,6 +220,28 @@ export class Grandma extends Walker {
     this.body.position.y = Math.abs(Math.sin(this.anim)) * 0.05;
     const glow = chasing ? 1 : 0.5;
     this.eyes.forEach((e) => ((e.material as THREE.MeshBasicMaterial).color.setRGB(glow, 0.1 * glow, 0.1 * glow)));
+    if (this.headMat) {
+      const pulse = chasing ? 0.35 + Math.sin(this.t * 9) * 0.15 : 0.06;
+      this.headMat.emissive.setRGB(pulse, 0, 0);
+      if (this.eyeLight) this.eyeLight.intensity = chasing ? 2.2 : 0.5;
+    }
+    if (this.rig) {
+      this.rig.update(dt);
+      if (this.state === 'stunned') { if (!this.stunnedAnim) { this.stunnedAnim = true; this.rig.play('die', { once: true, fade: 0.1 }); } }
+      else {
+        this.stunnedAnim = false;
+        if (this.state === 'grab') this.rig.play('attack-melee-right', { speed: 1.4 });
+        else if (this.speed > 2.6) this.rig.play('sprint', { speed: this.speed / 4 });
+        else if (this.speed > 0.2) this.rig.play('walk', { speed: Math.max(0.6, this.speed / 1.8) });
+        else this.rig.play('idle');
+      }
+      if (this.shovel) {
+        // dragged low while walking; raised overhead when she's coming for you
+        this.shovel.visible = this.state !== 'stunned';
+        this.shovel.position.set(0.42, chasing ? 1.2 : 0.75, chasing ? 0.15 : 0.25);
+        this.shovel.rotation.set(chasing ? -0.4 + Math.sin(this.t * 7) * 0.3 : 0.9, 0, chasing ? 0.2 : -0.15);
+      }
+    }
   }
 }
 
@@ -197,6 +254,16 @@ export class Zombie extends Walker {
   kx = 0; kz = 0;
   private legs: THREE.Mesh[] = []; private arms: THREE.Group[] = []; private body: THREE.Group;
   private mats: THREE.MeshStandardMaterial[] = [];
+  private rig: Anim | null = null; private died = false;
+
+  /** swap the placeholder for Kenney's animated zombie */
+  async dress() {
+    const m = await loadModel('graveyard-kit/character-zombie', { height: 1.75 });
+    this.mats = ownMaterials(m);
+    this.root.add(m);
+    this.body.visible = false;
+    this.rig = animate(m); this.rig.play('walk');
+  }
 
   constructor(house: House, ev: ActorEvents, scene: THREE.Scene, hp: number) {
     super(house, ev, 0.32);
@@ -234,6 +301,7 @@ export class Zombie extends Walker {
 
   update(dt: number, s: Senses, rand: () => number) {
     if (!this.alive) {
+      if (this.rig) { this.rig.update(dt); if (!this.died) { this.died = true; this.rig.play('die', { once: true, fade: 0.05 }); } }
       this.deadT += dt;
       this.body.rotation.x = -Math.min(Math.PI / 2, this.deadT * 5);
       this.body.position.y = Math.min(0.2, this.deadT);
@@ -291,5 +359,12 @@ export class Zombie extends Walker {
     this.flashT -= dt;
     const flash = this.flashT > 0;
     this.mats.forEach((m) => m.emissive.setHex(flash ? 0xaa0000 : 0x000000));
+    if (this.rig) {
+      this.rig.update(dt);
+      if (this.windT >= 0) this.rig.play('attack-melee-right', { speed: 1.3, fade: 0.08 });
+      else if (this.speed > 1.4) this.rig.play('sprint', { speed: this.speed / 3.2 });
+      else if (this.speed > 0.15) this.rig.play('walk', { speed: Math.max(0.5, this.speed / 1.4) });
+      else this.rig.play('idle');
+    }
   }
 }

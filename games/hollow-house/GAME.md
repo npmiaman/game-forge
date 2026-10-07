@@ -32,6 +32,9 @@ WASD · mouse look (click to lock) · Shift sprint · C/Ctrl crouch · Left clic
 - Scripted run: door → hallway → zombie killed in 2 hits → perk card → spotted → wardrobe hide/exit → caught (jump scare) → Day 2 respawn → escape with 3 keys.
 - AI soak: noisy sprinting player → Grandma goes patrol → investigate → chase on her own.
 
+## Assets used
+Poly Haven `wood_floor_worn`, `decrepit_wallpaper`, `painted_plaster_wall`; Kenney `furniture-kit` (beds, cupboards-as-wardrobes, sofas, desk, kitchen table + chairs, fridge, bathtub, TV, rugs, ceiling lamps — placed per room in `House.dress()`), `graveyard-kit/character-zombie` (animated), `mini-characters/character-female-c` as Grandma (pale tint, red face glow when hunting, `survival-kit/tool-shovel`), `food-kit/frying-pan` viewmodel, `mini-dungeon/key` + `potion`. Sounds: `impact-sounds` footsteps/impacts, `rpg-audio` doors/creaks/cloth/keys. Scream, heartbeat, groans, sting stay procedural.
+
 ## Status
 - [x] House, lighting, flashlight + battery, doors, hiding, items, 3 keys, exit
 - [x] Grandma AI (hearing, sight, doors, search, grab-from-hiding, stun), jump scare, days

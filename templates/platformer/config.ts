@@ -3,7 +3,7 @@ export const TITLE = '{{TITLE}}';
 export const SLUG = '{{SLUG}}';
 export const W = 960;
 export const H = 540;
-export const TILE = 32;
+export const TILE = 36;   // 18px Kenney tiles × 2
 
 export const PLAYER = {
   runSpeed: 260,
@@ -19,7 +19,7 @@ export const PLAYER = {
 };
 
 export const PALETTE = {
-  sky: 0x1b1638, skyBottom: 0x3a2a5e, ground: 0x5b3a7a, groundTop: 0x9b6bd6,
+  sky: 0x5fb4ff, skyBottom: 0xc8e8ff, ground: 0x5b3a7a, groundTop: 0x9b6bd6,
   player: 0x66e0ff, coin: 0xffd23f, spike: 0xff4d6d, enemy: 0x7dff6b, flag: 0xffffff,
 };
 

@@ -14,6 +14,8 @@ const games = readdirSync(resolve(root, 'games'), { withFileTypes: true })
 
 export default defineConfig({
   base: './',
+  // the CC0 asset library is served as-is (stable paths for models/textures/sounds) — see kit/assets.ts
+  publicDir: only ? false : 'assets',
   resolve: { alias: { '@kit': resolve(root, 'kit') } },
   server: { port: 5173, open: false },
   build: {
@@ -23,7 +25,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 4000,
     rollupOptions: {
       input: {
-        ...(only ? {} : { main: resolve(root, 'index.html') }),
+        ...(only ? {} : { main: resolve(root, 'index.html'), assets: resolve(root, 'assets.html') }),
         ...Object.fromEntries(games.map((g) => [g, resolve(root, 'games', g, 'index.html')])),
       },
     },

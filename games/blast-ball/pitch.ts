@@ -4,6 +4,7 @@
  */
 import * as THREE from 'three';
 import { PITCH } from './config';
+import { loadTexture } from '@kit/assets';
 
 export const HALF_L = PITCH.length / 2, HALF_W = PITCH.width / 2;
 export const TEAM_COLOR = [0xff7a1a, 0x2a7fff];
@@ -47,6 +48,8 @@ function netTexture() {
 
 export class Stadium {
   zoneWalls: THREE.Mesh[] = [];
+  private pitchMat!: THREE.MeshStandardMaterial;
+  private groundMat!: THREE.MeshStandardMaterial;
   private zoneTex: THREE.CanvasTexture;
   crowd!: THREE.InstancedMesh;
   private crowdBase: Float32Array = new Float32Array(0);
@@ -56,7 +59,9 @@ export class Stadium {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), new THREE.MeshStandardMaterial({ color: 0x2c5a2a, roughness: 1 }));
     ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
     scene.add(ground);
-    const pitch = new THREE.Mesh(new THREE.PlaneGeometry(PITCH.width + 2, PITCH.length + 2), new THREE.MeshStandardMaterial({ map: pitchTexture(), roughness: 0.95 }));
+    this.pitchMat = new THREE.MeshStandardMaterial({ map: pitchTexture(), roughness: 0.95 });
+    this.groundMat = ground.material as THREE.MeshStandardMaterial;
+    const pitch = new THREE.Mesh(new THREE.PlaneGeometry(PITCH.width + 2, PITCH.length + 2), this.pitchMat);
     pitch.rotation.x = -Math.PI / 2; pitch.receiveShadow = true;
     scene.add(pitch);
 
@@ -137,6 +142,15 @@ export class Stadium {
       w.rotation.y = Math.PI / 2; w.position.set(s * HALF_W, 4.5, 0);
       scene.add(w); this.zoneWalls.push(w);
     }
+  }
+
+  /** Real grass detail (Poly Haven normal/roughness) under the painted stripes + photo grass around the pitch. */
+  async addGrassDetail() {
+    const g = await loadTexture('leafy_grass', { repeat: [PITCH.width / 3, PITCH.length / 3] });
+    this.pitchMat.normalMap = g.normalMap ?? null; this.pitchMat.normalScale.set(0.7, 0.7);
+    this.pitchMat.roughnessMap = g.roughnessMap ?? null; this.pitchMat.needsUpdate = true;
+    const out = await loadTexture('leafy_grass', { repeat: 60 });
+    Object.assign(this.groundMat, out, { color: new THREE.Color(0x9ab08a) }); this.groundMat.needsUpdate = true;
   }
 
   setZone(halfWidth: number, time: number) {

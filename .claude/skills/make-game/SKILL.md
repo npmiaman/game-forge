@@ -22,6 +22,7 @@ Target: a game that is **fun within 10 seconds of pressing play**, verified by p
 | Real rigid bodies: stacking, slingshot, golf, ragdoll | `--template physics` |
 | Needs 3D | `--template 3d` |
 
+- **Art & sound** — pick packs from the asset library (`assets/CATALOG.md`): e.g. animated characters from `mini-characters`/`graveyard-kit`, props from the matching kit, a Poly Haven texture/sky for surfaces, footsteps/impacts/voice from the sound packs. If nothing fits, `npm run assets -- add <kenney-slug>` (browse kenney.nl/assets) before falling back to procedural art.
 - **Juice plan** — which feedback fires on the core verb, on reward, on damage ([game-feel.md](game-feel.md)).
 - **Out of scope** — name what you're NOT building this session.
 
@@ -34,7 +35,7 @@ Ask the user only if the genre itself is ambiguous; otherwise pick the most fun 
 ## 3. Build the core verb first
 
 Get the player moving and the core verb working with feedback before anything else. Most of the work is the game's Play scene; menus, pause, game over, best score, level-up cards come from the kit (`menuScene`, `gameOverScene`, `enablePause`, `chooseCard`).
-- Art: `kit/phaser/textures.ts` (procedural). Sound: `kit/audio.ts` presets. Feel: `Juice`.
+- Art + sound: the asset library via `kit/assets.ts` (models, animations, textures, skies, recorded sounds, sprite sheets) — see the Asset library section of AGENTS.md. Procedural `kit/phaser/textures.ts` / `kit/audio.ts` for abstract styles, effects and synth SFX. Feel: `Juice`.
 - Every tuning number goes in the game's `config.ts` and through `tune(obj, 'Name')` so `?tune` shows live sliders.
 - Systems to reuse rather than rewrite: `Director` (waves), `Upgrades` (roguelite picks), `Grid` (A*, flood fill), `Fsm` (AI/states), `Pool` + `SpatialHash` (>100 entities), `buildLevel` (ASCII levels), `TouchPad` (mobile).
 - Add debug URL params as you go (`?god`, `?level=`, `?wave=`) so playtests can reach late-game states.

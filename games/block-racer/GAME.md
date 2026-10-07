@@ -38,6 +38,9 @@ All numbers in `config.ts`. `?tune` for live sliders (+ "+30s" and "Next checkpo
 - Autopilot (no drifting) full run: 131s, 3.9km, checkpoint 8, then TIME UP.
 - Scripted human input: gas → drift charges → release → boost fires.
 
+## Assets used
+Kenney `car-kit/race` (player car, wheels spin/steer), `impact-sounds` (crates, crashes), `sci-fi-sounds` explosion (TNT), `voiceover-pack` (go / objective achieved / time over). The voxel world, engine synth and music stay procedural.
+
 ## Status
 - [x] Core driving, drift-boost, crates/stone/TNT/coins/boost pads/ramps, 4 biomes, checkpoints, timer, menu attract mode, time-up + best
 - [x] Reverse (S when stopped) so you can back off a wall

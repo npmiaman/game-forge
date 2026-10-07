@@ -4,6 +4,12 @@ import { angleDiff, clamp, damp } from '@kit/math';
 import { BALL, MOVE, PITCH, HEALTH, AI, GLOO } from './config';
 import { HALF_L, HALF_W, TEAM_COLOR, ownGoalZ } from './pitch';
 import { WEAPONS, type WeaponId, type Gloo, type Loot } from './weapons';
+import { loadModel, animate } from '@kit/assets';
+
+/** Kenney blaster per weapon */
+export const GUN_MODEL: Record<WeaponId, string> = { pistol: 'blaster-c', smg: 'blaster-d', shotgun: 'blaster-e', rocket: 'blaster-b' };
+/** Barrel direction per model, measured from the geometry (most point -z = our forward; blaster-e points +z) */
+const GUN_FLIP: Record<string, number> = { 'blaster-e': Math.PI };
 
 // ---------------------------------------------------------------- player
 
@@ -17,43 +23,47 @@ export class Player {
   goals = 0; knocks = 0; deaths = 0; lastHitBy: Player | null = null; hurtT = 0;
   // ai
   think = 0; moveX = 0; moveZ = 0; wantSprint = false; target: Player | null = null; glooT = 0; kickT = 0; aimErr = 0;
-  root = new THREE.Group(); private body = new THREE.Group();
-  private legs: THREE.Object3D[] = []; private arms: THREE.Object3D[] = []; private anim = 0;
-  gun: THREE.Mesh; muzzle = new THREE.Object3D();
-  private jersey: THREE.MeshStandardMaterial;
+  root = new THREE.Group();
+  gun = new THREE.Group(); muzzle = new THREE.Object3D();
+  private model: THREE.Object3D | null = null; private anim: ReturnType<typeof animate> | null = null;
+  private mats: THREE.MeshStandardMaterial[] = []; private hand: THREE.Object3D | null = null; private gunId = '';
+  shootT = 0; private dead = false;
+  ready: Promise<void>;
 
-  constructor(scene: THREE.Scene, public name: string, public team: number, public number: number, public role: 'field' | 'keeper', public human = false) {
-    const kit = role === 'keeper' ? (team === 0 ? 0x2ad16a : 0xd12aa0) : TEAM_COLOR[team];
-    this.jersey = new THREE.MeshStandardMaterial({ color: kit, roughness: 0.7 });
-    const skin = new THREE.MeshStandardMaterial({ color: [0xe0b090, 0x8a5a3a, 0xc08a60, 0xf0c8a0][number % 4], roughness: 0.8 });
-    const shorts = new THREE.MeshStandardMaterial({ color: team === 0 ? 0x1a1a1a : 0xf0f0f0, roughness: 0.8 });
-    const socks = new THREE.MeshStandardMaterial({ color: kit, roughness: 0.8 });
-    const box = (w: number, h: number, d: number, m: THREE.Material, parent: THREE.Object3D, x: number, y: number, z: number) => {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; parent.add(b); return b;
-    };
-    this.root.add(this.body);
-    for (const x of [-0.14, 0.14]) {
-      const leg = new THREE.Group(); leg.position.set(x, 0.85, 0); this.body.add(leg);
-      box(0.2, 0.4, 0.22, shorts, leg, 0, -0.15, 0); box(0.16, 0.5, 0.16, socks, leg, 0, -0.55, 0); box(0.18, 0.1, 0.3, new THREE.MeshStandardMaterial({ color: 0x111111 }), leg, 0, -0.82, -0.05);
-      this.legs.push(leg);
-    }
-    box(0.56, 0.62, 0.32, this.jersey, this.body, 0, 1.18, 0);
-    box(0.3, 0.3, 0.3, skin, this.body, 0, 1.68, 0);
-    box(0.32, 0.1, 0.32, new THREE.MeshStandardMaterial({ color: [0x1a1206, 0x3a2410, 0xd8b050, 0x101010][number % 4] }), this.body, 0, 1.86, 0);
-    // jersey number
-    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d')!;
-    g.fillStyle = '#fff'; g.font = 'bold 44px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(number), 32, 34);
-    const num = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
-    num.position.set(0, 1.22, 0.165); this.body.add(num);
-    for (const side of [-1, 1]) {
-      const a = new THREE.Group(); a.position.set(side * 0.36, 1.42, 0); this.body.add(a);
-      box(0.14, 0.5, 0.14, this.jersey, a, 0, -0.22, 0);
-      this.arms.push(a);
-    }
-    // gun held forward in both hands
-    this.gun = box(0.1, 0.14, 0.55, new THREE.MeshStandardMaterial({ color: 0x202226, roughness: 0.4, metalness: 0.6 }), this.body, 0.12, 1.2, -0.42);
-    this.muzzle.position.set(0, 0.02, -0.3); this.gun.add(this.muzzle);
+  constructor(scene: THREE.Scene, public name: string, public team: number, public number: number, public role: 'field' | 'keeper', public human = false, look = 'character-male-a') {
+    // team ring under the feet — the clearest way to read teams at a glance
+    const ringColor = role === 'keeper' ? (team === 0 ? 0x2ad16a : 0xd12aa0) : TEAM_COLOR[team];
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.42, 0.58, 28).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: ringColor, transparent: true, opacity: human ? 0.95 : 0.75 }));
+    ring.position.y = 0.03; this.root.add(ring);
+    this.muzzle.position.set(0, 0, -0.32); this.gun.add(this.muzzle);
     scene.add(this.root);
+    this.ready = (async () => {
+      const m = await loadModel(`mini-characters/${look}`, { height: 1.85 });
+      m.rotation.y = Math.PI;   // Kenney characters face +z; ours face -z
+      m.traverse((c) => {
+        const mesh = c as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        const mat = (mesh.material as THREE.MeshStandardMaterial).clone();
+        mat.color.lerp(new THREE.Color(ringColor), 0.28);   // light team tint, keeps the outfit readable
+        mesh.material = mat; this.mats.push(mat);
+      });
+      this.model = m; this.root.add(m);
+      this.anim = animate(m); this.anim.play('idle');
+      this.hand = m.getObjectByName('arm-right') ?? m;
+      this.root.add(this.gun);   // gun follows the hand's position but always aims where the player faces
+      await this.setGun();
+    })();
+  }
+
+  /** swap the held blaster model to match the current weapon */
+  async setGun() {
+    const id = GUN_MODEL[this.weapon];
+    if (id === this.gunId) return;
+    this.gunId = id;
+    const g = await loadModel(`blaster-kit/${id}`, { scale: 2.2 });
+    while (this.gun.children.length > 1) this.gun.remove(this.gun.children[1]);
+    g.rotation.y = GUN_FLIP[id] ?? 0;   // flip the model, not the group, so the muzzle marker stays at the front
+    this.gun.add(g);
   }
 
   get speed() { return Math.hypot(this.vx, this.vz); }
@@ -65,7 +75,7 @@ export class Player {
   spawn(x: number, z: number) {
     Object.assign(this, { x, z, vx: 0, vz: 0, hp: HEALTH.max, alive: true, respawnT: 0, stamina: MOVE.staminaMax, lastHitBy: null });
     this.yaw = this.team === 0 ? 0 : Math.PI;
-    this.root.visible = true; this.body.rotation.set(0, 0, 0); this.body.position.y = 0;
+    this.root.visible = true;
   }
 
   equip(id: WeaponId) { this.special = id; this.weapon = id; this.ammo = WEAPONS[id].ammo; }
@@ -112,24 +122,23 @@ export class Player {
   animate(dt: number, time: number) {
     this.root.position.set(this.x, 0, this.z);
     this.root.rotation.y = this.yaw;
-    if (!this.alive) {
-      this.body.rotation.x = damp(this.body.rotation.x, -Math.PI / 2, 10, dt);
-      this.body.position.y = damp(this.body.position.y, 0.2, 10, dt);
-      return;
-    }
+    if (!this.anim) return;
+    this.anim.update(dt);
+    this.kickT -= dt; this.shootT -= dt; this.hurtT -= dt;
+    this.gun.visible = this.alive;
+    if (!this.alive) { if (!this.dead) { this.dead = true; this.anim.play('die', { once: true, fade: 0.1 }); } return; }
+    if (this.dead) this.dead = false;
     const sp = this.speed;
-    this.anim += dt * sp * 1.6;
-    const sw = Math.sin(this.anim) * Math.min(1, sp / 4);
-    this.legs[0].rotation.x = sw * 0.8; this.legs[1].rotation.x = -sw * 0.8;
-    this.arms.forEach((a, i) => (a.rotation.x = -1.2 + (i ? 0.1 : -0.1) * sw));
-    this.arms[0].rotation.z = 0.3; this.arms[1].rotation.z = -0.4;
-    this.body.position.y = Math.abs(Math.sin(this.anim)) * 0.06 * Math.min(1, sp / 4);
-    this.body.rotation.x = this.sprinting ? -0.18 : -0.05;
-    this.kickT -= dt;
-    if (this.kickT > 0) this.legs[1].rotation.x = -1.4 * (this.kickT / 0.25);
-    this.hurtT -= dt;
-    this.jersey.emissive.setHex(this.hurtT > 0 ? 0x880000 : 0x000000);
-    void time;
+    if (this.kickT > 0) this.anim.play('attack-kick-right', { fade: 0.05, speed: 1.6 });
+    else if (this.shootT > 0 && sp < 3) this.anim.play('holding-both-shoot', { fade: 0.08 });
+    else if (sp > 8) this.anim.play('sprint', { speed: sp / 9 });
+    else if (sp > 0.6) this.anim.play('walk', { speed: Math.max(0.6, sp / 3.5) });
+    else this.anim.play('holding-both');
+    for (const m of this.mats) m.emissive.setHex(this.hurtT > 0 ? 0x770000 : 0x000000);
+    // gun sits where the 'holding' poses put both fists: chest height, in front of the body
+    const run = this.anim.current === 'sprint' || this.anim.current === 'walk';
+    this.gun.position.set(0.16, run ? 0.98 + Math.sin(time * 14) * 0.03 : 1.02, -0.38);
+    if (GUN_MODEL[this.weapon] !== this.gunId) void this.setGun();
   }
 }
 

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asset Library</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="/src/launcher.css" />
+  <link rel="stylesheet" href="/src/browser.css" />
+</head>
+<body>
+  <header>
+    <h1>ASSET <span>LIBRARY</span></h1>
+    <p class="sub"><span id="counts"></span> · all CC0 · click to preview · ⧉ copies the name to use in code or to give Claude</p>
+    <p class="sub"><a href="./">← arcade</a></p>
+  </header>
+  <nav id="tabs"></nav>
+  <div class="bar"><input id="q" placeholder="search… (e.g. zombie, car, footstep, wood)" autocomplete="off" /><select id="pack"></select></div>
+  <main id="list"></main>
+  <div id="viewer" class="hidden"><div class="vbox"><div id="vtitle"></div><div id="vcanvas"></div><div id="vanims"></div><button id="vclose">close ✕</button></div></div>
+  <div id="toast"></div>
+  <script type="module" src="/src/browser.ts"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { Grid, type P } from '@kit/grid';
 import { CELL, WALL_H } from './config';
+import { loadModel, loadTexture, sizeOf } from '@kit/assets';
 
 export const MAP = [
   '##############################',
@@ -88,6 +89,9 @@ export class House {
   spots: Record<'P' | 'G' | 'S' | 'K' | 'H' | 'A', P[]> = { P: [], G: [], S: [], K: [], H: [], A: [] };
   root = new THREE.Group();
   lights: THREE.PointLight[] = [];
+  private floorMat!: THREE.MeshStandardMaterial; private ceilMat!: THREE.MeshStandardMaterial; private wallMat!: THREE.MeshStandardMaterial;
+  private placeholders: THREE.Object3D[] = [];
+  private bulbs: { x: number; z: number }[] = [];
   key = (c: P) => `${c.x},${c.y}`;
 
   constructor(scene: THREE.Scene) {
@@ -95,17 +99,17 @@ export class House {
     for (const k of Object.keys(this.spots) as (keyof House['spots'])[]) this.spots[k] = g.findAll(k);
     const W = g.w * CELL, H = g.h * CELL;
 
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.8 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, H), (this.floorMat = new THREE.MeshStandardMaterial({ map: floorTex(), roughness: 0.8 })));
     (floor.material as THREE.MeshStandardMaterial).map!.repeat.set(g.w / 2, g.h / 2);
     floor.rotation.x = -Math.PI / 2; floor.position.set(W / 2, 0, H / 2); floor.receiveShadow = true;
-    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshStandardMaterial({ map: ceilTex(), roughness: 1 }));
+    const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W, H), (this.ceilMat = new THREE.MeshStandardMaterial({ map: ceilTex(), roughness: 1 })));
     (ceil.material as THREE.MeshStandardMaterial).map!.repeat.set(g.w, g.h);
     ceil.rotation.x = Math.PI / 2; ceil.position.set(W / 2, WALL_H, H / 2);
     this.root.add(floor, ceil);
 
     // walls
     const wallCells = g.findAll('#');
-    const wallMat = new THREE.MeshStandardMaterial({ map: wallpaper(), roughness: 0.9 });
+    const wallMat = (this.wallMat = new THREE.MeshStandardMaterial({ map: wallpaper(), roughness: 0.9 }));
     const walls = new THREE.InstancedMesh(new THREE.BoxGeometry(CELL, WALL_H, CELL), wallMat, wallCells.length);
     const m = new THREE.Matrix4();
     wallCells.forEach((c, i) => { const w = toWorld(c); walls.setMatrixAt(i, m.makeTranslation(w.x, WALL_H / 2, w.z)); });
@@ -148,13 +152,13 @@ export class House {
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); b.position.set(x, y, z); b.castShadow = b.receiveShadow = true; parent.add(b); return b;
     };
     const facing = (c: P): P => { for (const d of [{ x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }]) if (g.get(c.x + d.x, c.y + d.y) === '.') return { x: c.x + d.x, y: c.y + d.y }; return c; };
-    for (const c of g.findAll('T')) { const w = toWorld(c); const h = 0.8 + ((c.x * 7 + c.y * 3) % 3) * 0.35; box(CELL * 0.9, h, CELL * 0.9, wood, w.x, h / 2, w.z); }
+    for (const c of g.findAll('T')) { const w = toWorld(c); const h = 0.8 + ((c.x * 7 + c.y * 3) % 3) * 0.35; this.placeholders.push(box(CELL * 0.9, h, CELL * 0.9, wood, w.x, h / 2, w.z)); }
     for (const c of g.findAll('W')) {
       const w = toWorld(c), f = facing(c);
       const grp = new THREE.Group(); grp.position.set(w.x, 0, w.z); grp.rotation.y = Math.atan2(f.x - c.x, f.y - c.y);
       box(1.7, 2.5, 1.2, darkWood, 0, 1.25, 0, grp);
       box(0.04, 2.2, 0.02, new THREE.MeshBasicMaterial({ color: 0x000000 }), 0, 1.25, 0.61, grp);  // door gap line
-      this.root.add(grp);
+      this.root.add(grp); this.placeholders.push(grp);
       this.hides.push({ cell: c, kind: 'wardrobe', front: f, mesh: grp });
     }
     for (const c of g.findAll('B')) {
@@ -164,7 +168,7 @@ export class House {
       box(1.7, 0.2, 1.8, sheet, 0, 0.72, 0, grp);
       box(0.9, 0.15, 0.4, pillow, 0, 0.88, -0.6, grp);
       for (const [lx, lz] of [[-0.8, -0.85], [0.8, -0.85], [-0.8, 0.85], [0.8, 0.85]]) box(0.12, 0.5, 0.12, darkWood, lx, 0.25, lz, grp);
-      this.root.add(grp);
+      this.root.add(grp); this.placeholders.push(grp);
       this.hides.push({ cell: c, kind: 'bed', front: f, mesh: grp });
     }
 
@@ -175,9 +179,94 @@ export class House {
       const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd9a0 }));
       bulb.position.copy(l.position);
       this.root.add(l, bulb);
-      this.lights.push(l);
+      this.lights.push(l); this.bulbs.push(w);
     }
     scene.add(this.root);
+  }
+
+  /**
+   * Upgrade the placeholder house with the asset library: photoreal surfaces (Poly Haven) and real
+   * furniture (Kenney furniture-kit) chosen per room. Collision is unchanged — it's still cell-based.
+   */
+  async dress() {
+    const g = this.grid;
+    const [floorT, wallT, ceilT] = await Promise.all([
+      loadTexture('wood_floor_worn', { repeat: [g.w / 1.5, g.h / 1.5] }),
+      loadTexture('decrepit_wallpaper', { repeat: [1, 1.5] }),
+      loadTexture('painted_plaster_wall', { repeat: [g.w / 2, g.h / 2] }),
+    ]);
+    Object.assign(this.floorMat, floorT, { color: new THREE.Color(0x9a8a7a) }); this.floorMat.needsUpdate = true;
+    Object.assign(this.wallMat, wallT, { color: new THREE.Color(0xa89880) }); this.wallMat.needsUpdate = true;
+    Object.assign(this.ceilMat, ceilT, { color: new THREE.Color(0x6a6458) }); this.ceilMat.needsUpdate = true;
+
+    const facing = (c: P): P => { for (const d of [{ x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }]) { const ch = g.get(c.x + d.x, c.y + d.y); if (ch && '.KHASPG'.includes(ch)) return { x: c.x + d.x, y: c.y + d.y }; } return { x: c.x, y: c.y + 1 }; };
+    const place = async (id: string, cx: number, cz: number, faceTo: P | null, o: { w?: number; d?: number; h?: number; y?: number; stretch?: boolean } = {}) => {
+      const m = await loadModel(`furniture-kit/${id}`);
+      const sz = sizeOf(m);
+      const w = o.w ?? CELL * 0.92, d = o.d ?? CELL * 0.92;
+      let rot = 0;
+      if (faceTo) rot = Math.atan2(faceTo.x * CELL + CELL / 2 - cx, faceTo.y * CELL + CELL / 2 - cz);
+      const sideways = Math.abs(Math.sin(rot)) > 0.7;
+      const fw = sideways ? d : w, fd = sideways ? w : d;
+      if (o.stretch) m.scale.set(fw / sz.x, (o.h ?? sz.y) / sz.y, fd / sz.z);
+      else { const k = Math.min(1.35, fw / sz.x, fd / sz.z, o.h ? o.h / sz.y : Infinity); m.scale.setScalar(k); }
+      m.rotation.y = rot;
+      m.position.set(cx, o.y ?? 0, cz);
+      this.root.add(m);
+      return m;
+    };
+    const jobs: Promise<unknown>[] = [];
+    // furniture blocks: group connected 'T' cells, pick models by room and block size
+    const seen = new Set<string>();
+    for (const c of g.findAll('T')) {
+      if (seen.has(this.key(c))) continue;
+      const comp: P[] = []; const q = [c]; seen.add(this.key(c));
+      while (q.length) { const p = q.pop()!; comp.push(p); for (const n of g.neighbors(p.x, p.y)) if (g.get(n.x, n.y) === 'T' && !seen.has(this.key(n))) { seen.add(this.key(n)); q.push(n); } }
+      const xs = comp.map((p) => p.x), ys = comp.map((p) => p.y);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs) + 1, y0 = Math.min(...ys), y1 = Math.max(...ys) + 1;
+      const cx = ((x0 + x1) / 2) * CELL, cz = ((y0 + y1) / 2) * CELL, bw = (x1 - x0) * CELL, bd = (y1 - y0) * CELL;
+      const room = this.roomAt(c), front = comp.length === 1 ? facing(c) : null;
+      if (comp.length > 1) {
+        if (room === 'Kitchen') {
+          jobs.push(place('tableCloth', cx, cz, null, { w: bw * 0.85, d: bd * 0.8, h: 0.8, stretch: true }));
+          for (let i = 0; i < 3; i++) for (const side of [-1, 1]) jobs.push(place('chairCushion', x0 * CELL + (i + 0.7) * (bw / 3), cz + side * (bd / 2 + 0.05), { x: Math.floor(cx / CELL), y: Math.floor(cz / CELL) }, { w: 0.6, d: 0.6 }));
+        } else if (room === 'Study') {
+          jobs.push(place('desk', cx, cz, null, { w: bw * 0.8, d: bd * 0.55, h: 0.8, stretch: true }));
+          jobs.push(place('computerScreen', cx, cz - 0.3, null, { w: 0.7, d: 0.4, y: 0.8 }));
+          jobs.push(place('books', cx + 0.9, cz + 0.2, null, { w: 0.5, d: 0.3, y: 0.8 }));
+          jobs.push(place('lampRoundTable', cx - 1.1, cz - 0.2, null, { w: 0.4, d: 0.4, y: 0.8 }));
+        } else {
+          jobs.push(place('loungeSofaLong', cx, z0(cz, bd), null, { w: bw * 0.95, d: bd * 0.45 }));
+          jobs.push(place('tableCoffee', cx, cz + bd * 0.2, null, { w: bw * 0.5, d: bd * 0.3 }));
+        }
+        continue;
+      }
+      const w = toWorld(c);
+      const byRoom: Record<string, string[]> = {
+        Study: ['bookcaseClosedWide', 'bookcaseOpen'], Bathroom: ['bathtub'], Kitchen: ['kitchenFridgeLarge'],
+        'Living room': ['cabinetTelevision'], "Grandma's room": ['sideTableDrawers', 'bookcaseClosed'],
+      };
+      const list = byRoom[room] ?? ['sideTable'];
+      const id = list[(c.x + c.y) % list.length];
+      jobs.push(place(id, w.x, w.z, front, { h: id.startsWith('bookcase') || id.startsWith('kitchen') ? 2.2 : undefined }));
+      if (id === 'cabinetTelevision') jobs.push(place('televisionVintage', w.x, w.z, front, { w: 1.1, d: 0.6, y: 0.62 }));
+      if (id === 'sideTableDrawers') jobs.push(place('lampRoundTable', w.x, w.z, front, { w: 0.5, d: 0.5, y: 0.6 }));
+    }
+    function z0(cz: number, bd: number) { return cz - bd * 0.25; }
+    // hiding spots: real beds and tall closed cupboards ("wardrobes")
+    for (const h of this.hides) {
+      const w = toWorld(h.cell), room = this.roomAt(h.cell);
+      if (h.kind === 'bed') jobs.push(place(room === 'Your bedroom' ? 'bedSingle' : 'bedDouble', w.x, w.z, h.front, { w: 1.9, d: 1.95 }));
+      else jobs.push(place('bookcaseClosedDoors', w.x, w.z, h.front, { h: 2.4, w: 1.6, d: 0.9 }));
+    }
+    // decor that doesn't block anything: rugs on the floor, lamps on the ceiling, a doormat by the exit
+    jobs.push(place('rugRectangle', 6 * CELL + 1, 13.5 * CELL, null, { w: 6, d: 4 }));
+    jobs.push(place('rugRound', 3.5 * CELL, 3.5 * CELL, null, { w: 3, d: 3 }));
+    jobs.push(place('rugRectangle', 20 * CELL, 3 * CELL, null, { w: 3, d: 2.4 }));
+    jobs.push(place('rugDoormat', 6.5 * CELL, 15.6 * CELL, null, { w: 1.6, d: 1 }));
+    for (const b of this.bulbs) jobs.push(place('lampSquareCeiling', b.x, b.z, null, { w: 0.7, d: 0.7 }).then((m) => { m.position.y = WALL_H - sizeOf(m).y; }));
+    await Promise.all(jobs);
+    for (const ph of this.placeholders) ph.visible = false;
   }
 
   door(c: P) { return this.doors.get(this.key(c)); }

@@ -32,6 +32,9 @@ Pistol (∞), SMG, Shotgun (8 pellets), Rocket launcher (splash + launches the b
 - Human input script: dribble → charged kick (33 m/s) → pistol hits with hit marker + damage numbers → gloo wall → rocket pickup.
 - Balance history: first pass had ~20 knocks/min and 0 goals → raised HP to 150, AI damage ×0.55, AI fire rate ×0.6, body-aimed AI; then 11 goals in 2 min → goal 8.5 wide, keeper reach ×1.4, keeper speed 0.85.
 
+## Assets used
+Kenney `mini-characters` (animated players: idle/walk/sprint/holding-both-shoot/attack-kick-right/die), `blaster-kit` (guns + crates), Poly Haven `stadium_01` HDRI lighting + `leafy_grass` normals on the pitch, sounds from `sci-fi-sounds` (lasers, explosions), `digital-audio` (SMG), `impact-sounds` (kicks, hits, glass, crates), `voiceover-pack` (ready/go/hurry up/final round/you win…). Crowd, whistle and gloo zap stay procedural.
+
 ## Status
 - [x] Match flow, ball physics, dribble/tackle/keepers, guns, rockets, gloo, loot, airdrops, zone, crowd, HUD, minimap, attract mode
 - [ ] Not verified by a human: mouse feel, kick power curve, audio mix

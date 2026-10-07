@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { text, button, clock } from '@kit/phaser/ui';
 import { store } from '@kit/save';
 import { sfx, music } from '@kit/audio';
+import { sound } from '@kit/assets';
 import { W, H } from '../config';
 import { UPGRADES } from '../data';
 import type { RunState } from './Play';
@@ -31,7 +32,7 @@ export class GameOver extends Phaser.Scene {
         if (newBest && R.score > 0) {
           const nb = text(this, W / 2, 255, 'NEW BEST!', { size: 22, color: '#ffe14d', shadow: true }).setScale(0);
           this.tweens.add({ targets: nb, scale: 1, duration: 400, ease: 'Back.Out' });
-          sfx.notes('select', [0, 4, 7, 12], 0.09);
+          sfx.notes('select', [0, 4, 7, 12], 0.09); void sound.play('voiceover-pack/new_highscore', { minGap: 0 });
         }
       } });
     if (!newBest) text(this, W / 2, 255, `BEST ${save.get('best').toLocaleString()}`, { size: 14, color: '#8899cc' });

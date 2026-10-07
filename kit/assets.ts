@@ -1,0 +1,182 @@
+/**
+ * The CC0 asset library (assets/ — see assets/CATALOG.md, or browse /assets.html).
+ *
+ * Three.js:
+ *   const car = await loadModel('car-kit/race');                    // THREE.Group (clone — use as many as you like)
+ *   const hero = await loadModel('mini-characters/character-male-b');
+ *   const anim = animate(hero);  anim.play('walk');  each frame: anim.update(dt)
+ *   const floor = await loadTexture('wood_floor_worn', { repeat: 8 });  // { map, normalMap, roughnessMap } → spread into a material
+ *   await loadHdri(scene, 'stadium_01', { background: true });        // image-based lighting + optional sky
+ * Sound (any engine):
+ *   await sound.load('impact-sounds/footstep_wood_*');                 // preload (optional — play() loads lazily)
+ *   sound.play('impact-sounds/footstep_wood_*', { volume: 0.5 })       // '*' = random variant each time
+ * Anything (Phaser images, CSS, etc):
+ *   assetUrl('sprites/tiny-dungeon/Tilemap/tilemap_packed.png')
+ *
+ * Files are served as-is from assets/ (Vite publicDir), so paths stay stable in dev, builds and itch.io zips.
+ */
+import * as THREE from 'three';
+import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+import { audio } from './audio';
+
+/** Asset root, relative to the current page: games and templates live two levels down (<root>/games/<slug>/), the arcade at <root>/. */
+const ROOT = new URL(/\/(games|templates)\/[^/]+\/?[^/]*$/.test(location.pathname) ? '../../' : './', location.href.replace(/[^/]*$/, ''));
+export const assetUrl = (path: string) => new URL(path.replace(/^\/+/, ''), ROOT).href;
+
+// ---------------------------------------------------------------- catalog (lazy, for wildcards + validation)
+interface Catalog { models: Record<string, { name: string; animations?: string[] }[]>; sounds: Record<string, string[]>; textures: string[]; hdri: string[] }
+let catalogP: Promise<Catalog> | null = null;
+export const catalog = (): Promise<Catalog> => (catalogP ??= fetch(assetUrl('catalog.json')).then((r) => r.json() as Promise<Catalog>));
+
+// ---------------------------------------------------------------- models
+const gltfLoader = new GLTFLoader();
+const gltfCache = new Map<string, Promise<GLTF>>();
+function gltf(id: string) {
+  let p = gltfCache.get(id);
+  if (!p) {
+    p = gltfLoader.loadAsync(assetUrl(`models/${id}.glb`)).catch((e) => { gltfCache.delete(id); throw new Error(`loadModel('${id}') failed — check assets/CATALOG.md for the exact name. ${e}`); });
+    gltfCache.set(id, p);
+  }
+  return p;
+}
+
+export interface ModelOpts {
+  /** uniform scale, or a target height in metres via `height` */
+  scale?: number; height?: number;
+  /** enable shadows on every mesh (default true) */
+  shadows?: boolean;
+  /** tint every material (keeps texture detail) */
+  tint?: number;
+}
+/** Load a model by "pack/name" (no .glb). Returns a fresh clone each call; skinned rigs are cloned correctly. */
+export async function loadModel(id: string, o: ModelOpts = {}): Promise<THREE.Group> {
+  const g = await gltf(id);
+  const obj = SkeletonUtils.clone(g.scene) as THREE.Group;
+  obj.userData.animations = g.animations;
+  obj.userData.assetId = id;
+  obj.traverse((c) => {
+    const m = c as THREE.Mesh;
+    if (!m.isMesh) return;
+    m.castShadow = m.receiveShadow = o.shadows ?? true;
+    if (o.tint !== undefined) { m.material = (m.material as THREE.MeshStandardMaterial).clone(); (m.material as THREE.MeshStandardMaterial).color.multiply(new THREE.Color(o.tint)); }
+  });
+  if (o.height) { const b = new THREE.Box3().setFromObject(obj); obj.scale.setScalar(o.height / Math.max(1e-6, b.max.y - b.min.y)); }
+  else if (o.scale) obj.scale.setScalar(o.scale);
+  return obj;
+}
+/** Preload several models in parallel (cache only). */
+export const preloadModels = (ids: string[]) => Promise.all(ids.map(gltf));
+
+/** Bounding size of a model (after scale). */
+export function sizeOf(obj: THREE.Object3D) { return new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3()); }
+
+/** Animation helper for rigged models (Kenney characters share one rig: idle, walk, sprint, jump, die, attack-*, holding-*…). */
+export function animate(obj: THREE.Object3D) {
+  const mixer = new THREE.AnimationMixer(obj);
+  const clips = (obj.userData.animations ?? []) as THREE.AnimationClip[];
+  let current: THREE.AnimationAction | null = null, currentName = '';
+  return {
+    mixer,
+    names: clips.map((c) => c.name),
+    /** Crossfade to a clip. once=true plays it a single time and holds the last frame. */
+    play(name: string, o: { fade?: number; once?: boolean; speed?: number } = {}) {
+      if (name === currentName && !o.once) { if (current && o.speed) current.timeScale = o.speed; return current; }
+      const clip = clips.find((c) => c.name === name);
+      if (!clip) { console.warn(`[assets] no animation "${name}" — have: ${clips.map((c) => c.name).join(', ')}`); return null; }
+      const next = mixer.clipAction(clip);
+      next.reset(); next.timeScale = o.speed ?? 1;
+      next.setLoop(o.once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); next.clampWhenFinished = !!o.once;
+      if (current && current !== next) current.crossFadeTo(next, o.fade ?? 0.15, false);
+      next.play();
+      current = next; currentName = name;
+      return next;
+    },
+    get current() { return currentName; },
+    update(dt: number) { mixer.update(dt); },
+  };
+}
+
+// ---------------------------------------------------------------- textures + skies
+const texLoader = new THREE.TextureLoader();
+const texCache = new Map<string, Promise<THREE.Texture>>();
+function tex(url: string, srgb: boolean) {
+  const key = url + srgb;
+  let p = texCache.get(key);
+  if (!p) { p = texLoader.loadAsync(url).then((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; return t; }); texCache.set(key, p); }
+  return p;
+}
+/** Poly Haven PBR set → material params: new THREE.MeshStandardMaterial({ ...(await loadTexture('brick_wall_001', { repeat: 4 })) }) */
+export async function loadTexture(id: string, o: { repeat?: number | [number, number] } = {}) {
+  const [map, normalMap, roughnessMap] = await Promise.all([
+    tex(assetUrl(`textures/${id}/diff.jpg`), true),
+    tex(assetUrl(`textures/${id}/nor.jpg`), false).catch(() => null),
+    tex(assetUrl(`textures/${id}/rough.jpg`), false).catch(() => null),
+  ]);
+  const rep = Array.isArray(o.repeat) ? o.repeat : [o.repeat ?? 1, o.repeat ?? 1];
+  const out: { map: THREE.Texture; normalMap?: THREE.Texture; roughnessMap?: THREE.Texture } = { map: map.clone() };
+  if (normalMap) out.normalMap = normalMap.clone();
+  if (roughnessMap) out.roughnessMap = roughnessMap.clone();
+  for (const t of Object.values(out)) if (t) { t.repeat.set(rep[0], rep[1]); t.needsUpdate = true; }
+  return out;
+}
+/** Load an image from the library as a texture (sprites, particles, UI). */
+export const loadImage = (path: string) => tex(assetUrl(path), true);
+
+/** HDRI sky: sets scene.environment (realistic lighting/reflections) and optionally the visible background. */
+export async function loadHdri(scene: THREE.Scene, id: string, o: { background?: boolean; renderer?: THREE.WebGLRenderer; intensity?: number; blur?: number } = {}) {
+  const hdr = await new HDRLoader().loadAsync(assetUrl(`hdri/${id}.hdr`));
+  hdr.mapping = THREE.EquirectangularReflectionMapping;
+  scene.environment = hdr;
+  scene.environmentIntensity = o.intensity ?? 1;
+  if (o.background) { scene.background = hdr; scene.backgroundBlurriness = o.blur ?? 0; scene.backgroundIntensity = o.intensity ?? 1; }
+  return hdr;
+}
+
+// ---------------------------------------------------------------- sound files
+const bufCache = new Map<string, Promise<AudioBuffer>>();
+const groupCache = new Map<string, Promise<string[]>>();
+const lastPlay = new Map<string, number>();
+async function expand(pattern: string): Promise<string[]> {
+  if (!pattern.includes('*')) return [pattern];
+  let p = groupCache.get(pattern);
+  if (!p) {
+    p = catalog().then((c) => {
+      const [pack, glob] = pattern.split('/');
+      const re = new RegExp('^' + glob.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+      const hits = (c.sounds[pack] ?? []).filter((n) => re.test(n)).map((n) => `${pack}/${n}`);
+      if (!hits.length) console.warn(`[assets] no sounds match "${pattern}"`);
+      return hits;
+    });
+    groupCache.set(pattern, p);
+  }
+  return p;
+}
+function buffer(id: string) {
+  let p = bufCache.get(id);
+  if (!p) { p = fetch(assetUrl(`sounds/${id}.ogg`)).then((r) => { if (!r.ok) throw new Error(`sound "${id}" not found`); return r.arrayBuffer(); }).then((a) => audio.ctx.decodeAudioData(a)); bufCache.set(id, p); }
+  return p;
+}
+export const sound = {
+  /** Preload a sound or wildcard group so the first play has no delay. */
+  async load(...patterns: string[]) { for (const pat of patterns) for (const id of await expand(pat)) await buffer(id).catch(() => {}); },
+  /** Play a recorded sound. Routed through the kit audio bus, so mute/volume apply. */
+  async play(pattern: string, o: { volume?: number; rate?: number; pan?: number; detune?: number; minGap?: number } = {}) {
+    if (audio.muted || audio.ctx.state !== 'running') return;
+    const now = audio.ctx.currentTime;
+    if (now - (lastPlay.get(pattern) ?? -1) < (o.minGap ?? 0.04)) return;
+    lastPlay.set(pattern, now);
+    const ids = await expand(pattern);
+    if (!ids.length) return;
+    const buf = await buffer(ids[Math.floor(Math.random() * ids.length)]).catch((e) => { console.warn('[assets]', e.message); return null; });
+    if (!buf) return;
+    const src = audio.ctx.createBufferSource(); src.buffer = buf;
+    src.playbackRate.value = (o.rate ?? 1) * (1 + (Math.random() - 0.5) * 0.06);
+    if (o.detune) src.detune.value = o.detune;
+    const g = audio.ctx.createGain(); g.gain.value = o.volume ?? 1;
+    let node: AudioNode = g;
+    if (o.pan) { const pn = audio.ctx.createStereoPanner(); pn.pan.value = Math.max(-1, Math.min(1, o.pan)); g.connect(pn); node = pn; }
+    src.connect(g); node.connect(audio.output); src.start();
+  },
+};
